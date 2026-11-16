@@ -1,0 +1,104 @@
+# Produção na VPS: Postgres + migração + API + web + Caddy (HTTPS automático).
+# Na raiz do repositório:
+#   docker compose -f deploy/docker-compose.yml up -d --build
+# As variáveis vêm de deploy/.env (copie de deploy/.env.example). Guia: deploy/README.md
+# Outro arquivo de variáveis: ENV_FILE=/caminho/arquivo docker compose --env-file /caminho/arquivo ...
+
+name: universo-folks
+
+x-api-env: &api-env
+  NODE_ENV: production
+  PORT: "3000"
+  DATABASE_URL: postgresql://${POSTGRES_USER:-folks}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-universo_folks}?schema=public
+  APP_URL: https://${API_DOMAIN:?defina API_DOMAIN}
+  PUBLIC_APP_URL: https://${WEB_DOMAIN:?defina WEB_DOMAIN}
+  CORS_ORIGINS: https://${WEB_DOMAIN}${CORS_EXTRA_ORIGINS:+,${CORS_EXTRA_ORIGINS}}
+  STORAGE_DRIVER: local
+  STORAGE_LOCAL_PATH: /app/backend/storage
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-folks}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-universo_folks}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # sem "ports": o banco só é acessível pela rede interna do compose
+
+  # aplica as migrações pendentes a cada "up" (prisma migrate deploy nunca apaga dados)
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/docker/api.Dockerfile
+      target: build
+    image: universo-folks-api-tools
+    env_file: ${ENV_FILE:-.env}
+    environment: *api-env
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/docker/api.Dockerfile
+      target: runtime
+    image: universo-folks-api
+    restart: unless-stopped
+    env_file: ${ENV_FILE:-.env}
+    environment: *api-env
+    volumes:
+      - storage:/app/backend/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}/api
+    image: universo-folks-web
+    restart: unless-stopped
+    environment:
+      # as rotas /api/sessao (BFF) falam com a API pela rede interna
+      API_URL: http://api:3000/api
+    depends_on:
+      api:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?defina ACME_EMAIL (e-mail para os avisos do Let's Encrypt)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+volumes:
+  pgdata:
+  storage:
+  caddy_data:
+  caddy_config:

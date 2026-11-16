@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
-storage/
+# só a pasta de arquivos enviados (não o módulo src/storage)
+/storage/
 coverage
 *.tsbuildinfo

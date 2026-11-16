@@ -1,0 +1,38 @@
+# HTTPS automático (Let's Encrypt) para os dois domínios. Os DNS (registro A/AAAA) dos dois
+# precisam apontar para a VPS antes do primeiro "up", senão o certificado não é emitido.
+{
+	email {$ACME_EMAIL}
+}
+
+# Web: painel do MASTER, painel da empresa, área de estudo e BFF de sessão (/api/sessao)
+{$WEB_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	reverse_proxy web:3100
+}
+
+# API: /api, /health e o MCP do Claude (/mcp, com respostas em streaming)
+{$API_DOMAIN} {
+	# não comprime text/event-stream: o streaming do MCP precisa sair na hora
+	encode {
+		zstd
+		gzip
+		match {
+			header Content-Type application/json*
+			header Content-Type text/html*
+			header Content-Type text/plain*
+			header Content-Type text/css*
+			header Content-Type application/javascript*
+		}
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy api:3000
+}

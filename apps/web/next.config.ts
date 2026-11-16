@@ -1,4 +1,8 @@
+import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
+
+/** Raiz do monorepo: o build standalone precisa seguir o @folks/shared do workspace. */
+const monorepoRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 /**
  * A área logada é renderizada no cliente: a sessão fica em memória e o refresh num cookie
@@ -9,7 +13,11 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // imagem Docker enxuta (deploy/docker/web.Dockerfile): server.js + só as dependências usadas
+  output: 'standalone',
+  outputFileTracingRoot: monorepoRoot,
   turbopack: {
+    root: monorepoRoot,
     rules: {
       '*.css': { loaders: ['@tailwindcss/turbopack'], as: '*.css' },
     },

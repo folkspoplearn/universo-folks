@@ -1,0 +1,80 @@
+# CI: confere cada push e pull request na main (typecheck, lint, testes) e se as imagens de produção constroem.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Typecheck, lint e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            apps/mobile/package-lock.json
+
+      - name: Instalar workspaces (web e pacotes)
+        run: npm ci --no-audit --no-fund
+      - name: Pacotes compartilhados (build e testes)
+        run: |
+          npm run build -w @folks/shared -w @folks/content-ingest
+          npm test -w @folks/shared -w @folks/content-ingest
+
+      - name: API (instalar)
+        working-directory: backend
+        run: npm ci --no-audit --no-fund && npx prisma generate
+      - name: API (typecheck e testes)
+        working-directory: backend
+        run: npm run typecheck && npm test
+
+      - name: Web (lint e typecheck)
+        working-directory: apps/web
+        run: npm run lint && npm run typecheck
+
+      - name: App (instalar)
+        working-directory: apps/mobile
+        run: npm ci --no-audit --no-fund
+      - name: App (lint e typecheck)
+        working-directory: apps/mobile
+        run: npm run lint && npm run typecheck
+
+      - name: Harness (agentes, skills, hooks e knowledge)
+        run: npm run harness:check
+
+  imagens:
+    name: Imagens de produção (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/api.Dockerfile
+          push: false
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/web.Dockerfile
+          build-args: NEXT_PUBLIC_API_URL=https://api.exemplo.com.br/api
+          push: false
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web

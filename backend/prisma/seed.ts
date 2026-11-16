@@ -37,6 +37,12 @@ async function base() {
 
   const email = (process.env.SEED_MASTER_EMAIL ?? 'master@folks.com.br').toLowerCase();
   const password = process.env.SEED_MASTER_PASSWORD ?? 'TroqueEssaSenha123';
+  if (process.env.NODE_ENV === 'production' && (!process.env.SEED_MASTER_PASSWORD || /troque/i.test(password) || password.length < 12)) {
+    throw new Error('Em produção, defina SEED_MASTER_PASSWORD com uma senha forte (12+ caracteres, sem o valor de exemplo).');
+  }
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO === 'true') {
+    throw new Error('SEED_DEMO cria empresa e pessoas de exemplo: não use em produção.');
+  }
   const master = await prisma.user.upsert({
     where: { email },
     create: {

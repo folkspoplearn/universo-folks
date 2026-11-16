@@ -8,6 +8,25 @@
 - **App:** React Native com Expo SDK 58 + Expo Router, publicado na App Store e no Google Play via EAS (ADR 0012).
 - **Infra:** VPS com Docker Compose + Caddy (HTTPS) + backup diário fora da VPS. Storage S3/R2 + CDN em produção.
 
+## Deploy (produção)
+Guia passo a passo em `deploy/README.md`.
+- **`deploy/docker-compose.yml`:** `postgres` (sem porta exposta), `migrate`, `api`, `web` e `caddy`.
+  - `migrate` roda `prisma migrate deploy` a cada `up`, antes da API.
+  - O seed é manual: `run --rm migrate npm run db:seed`.
+- **Dois domínios:** `WEB_DOMAIN` (web) e `API_DOMAIN` (API, `/mcp`, webhooks).
+  - A web tem as próprias rotas `/api/sessao`, por isso a API não pode ficar no mesmo domínio em `/api`.
+  - `NEXT_PUBLIC_API_URL` entra no build da web: trocou o domínio, refaça a imagem.
+- **Imagens:** `deploy/docker/api.Dockerfile` (alvo `build` para migração e seed; `runtime` enxuto) e `web.Dockerfile` (Next `output: 'standalone'`). O contexto do build é a raiz do repositório.
+- **Travas de produção** (`backend/src/config/production-check.ts`). Com `NODE_ENV=production`, a API não sobe se:
+  - `JWT_ACCESS_SECRET` tiver menos de 32 caracteres;
+  - algum valor ainda for "troque…" do exemplo;
+  - a URL não for https;
+  - `CORS_ORIGINS` for `*`.
+
+  O Swagger fica desligado por padrão. O seed recusa a senha de exemplo e o `SEED_DEMO`.
+- **Backup:** `deploy/scripts/backup.sh`, com `pg_dump -Fc` e o tar do volume `storage`, retenção em dias e cópia opcional pelo rclone.
+- **CI:** `.github/workflows/ci.yml` roda typecheck, lint e testes de cada pacote e o build das duas imagens.
+
 ## Monorepo
 ```
 apps/api        NestJS (módulos por domínio)

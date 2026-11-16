@@ -5,7 +5,8 @@ dist/
 !.env.example
 *.tsbuildinfo
 coverage/
-storage/
+# arquivos enviados da API (não o módulo backend/src/storage)
+/backend/storage/
 # índice do RAG é gerado (npm run rag:index)
 harness/rag/.index/
 # relatórios de execução

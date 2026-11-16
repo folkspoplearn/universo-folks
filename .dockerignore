@@ -1,0 +1,25 @@
+# o build usa a raiz do repositório como contexto: só entra o que as imagens precisam
+**/node_modules
+**/dist
+**/dist-test
+**/.next
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+**/*.local.md
+backend/storage
+**/coverage
+.git
+.github
+.claude
+apps/mobile
+backups
+docs
+harness
+knowledge
+agents
+skills
+deploy
+/image*.png
+backend/test
