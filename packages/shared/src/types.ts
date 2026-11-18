@@ -187,6 +187,8 @@ export interface Slide {
   check?: Record<string, unknown>;
   /** sons da tela (botões "ouvir"): notas sintetizadas ou arquivo de áudio (ver soundOf) */
   audioDemos?: Array<{ label: string; caption?: string; sequence?: unknown[]; url?: string }>;
+  /** narração ao abrir a tela (sem ela, lê título + texto) */
+  say?: string;
 }
 
 export interface Me {

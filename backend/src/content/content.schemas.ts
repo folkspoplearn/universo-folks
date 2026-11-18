@@ -32,6 +32,8 @@ export const slideSchema = z
     text: z.string(),
     visualHtml: z.string().nullable().optional(),
     audioDemos: z.array(z.unknown()).nullable().optional(),
+    /** narração ao abrir a tela (sem ela, lê título + texto) */
+    say: z.string().max(600).nullable().optional(),
   })
   .passthrough();
 export const lessonContent = z.object({ slides: z.array(slideSchema).min(1), generators: z.array(z.string()).optional() }).passthrough();
@@ -120,6 +122,8 @@ export const courseCreate = z.object({
   icon: z.string().nullable().optional(),
   meta: z.string().nullable().optional(),
   drillLabel: z.string().nullable().optional(),
+  /** narração em voz alta: "auto" (lê sozinho, 1º ano), "button" (só pelo alto-falante), null (sem) */
+  narration: z.enum(['auto', 'button']).nullable().optional(),
   badge: badgeSchema.nullable().optional(),
   gameId: z.string().nullable().optional(),
   gameUrl: z.string().nullable().optional(),
@@ -269,6 +273,8 @@ export const courseSpec = z.object({
   icon: z.string().optional(),
   meta: z.string().optional(),
   drillLabel: z.string().optional(),
+  /** narração em voz alta: "auto" (1º ano: lê cada tela e pergunta sozinho) ou "button" (só pelo alto-falante) */
+  narration: z.enum(['auto', 'button']).optional(),
   badge: badgeSchema.optional(),
   /** código do modelo de trilha (list_trail_templates) que o curso segue */
   trailTemplate: z.string().optional(),

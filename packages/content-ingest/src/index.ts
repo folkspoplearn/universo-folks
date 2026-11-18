@@ -12,6 +12,7 @@ export * from './report';
 export * from './plan';
 export { slugify, parseVimeo, contentHash } from './text';
 export { extractJsonBlocks } from './extract';
+export { looksPortuguese } from './adapters/lenient';
 export { CONVERSION_PROMPT } from './prompt';
 export * from './questions';
 export * from './catalog';

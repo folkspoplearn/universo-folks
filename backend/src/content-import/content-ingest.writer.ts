@@ -94,6 +94,7 @@ export class ContentIngestWriter {
       icon: c.icon ?? null,
       meta: c.meta ?? null,
       drillLabel: c.drillLabel ?? null,
+      narration: c.narration ?? null,
       badge: c.badge ? (c.badge as Prisma.InputJsonValue) : Prisma.DbNull,
       contentHash: hash,
       sourceImportId: opts.importId,

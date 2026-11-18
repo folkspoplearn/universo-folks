@@ -1,5 +1,7 @@
 # Deploy na VPS (produção)
 
+> **Primeiro momento: Supabase + Vercel.** O guia atual é [vercel-supabase.md](vercel-supabase.md) (ADR 0016). Este guia de VPS com Docker fica pronto para quando a plataforma sair da Vercel.
+
 Pilha: **Docker Compose** com Postgres 16, API (NestJS), web (Next.js) e **Caddy** (HTTPS automático pelo Let's Encrypt).
 
 | Serviço | O que faz | Acesso |

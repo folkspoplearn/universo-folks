@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd .. && npm ci -w @folks/content-ingest --ignore-scripts --no-audit --no-fund && cd backend && npm ci --no-audit --no-fund",
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "public",
+  "regions": ["gru1"],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60,
+      "includeFiles": "dist/**"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "crons": [{ "path": "/api/cron/expire-subscriptions", "schedule": "0 6 * * *" }]
+}

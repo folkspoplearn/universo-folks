@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { colors, errorMessage, soundOf, type Slide } from '@folks/shared';
+import { colors, errorMessage, slideSpeech, soundOf, speakable, type Narration, type Slide } from '@folks/shared';
 import { useSession } from '@/lib/session';
 import { useSound } from '@/lib/sound';
+import { useAutoSpeak, useNarrator } from '@/lib/narrator';
+import { NarrationButton } from './sound/narration-button';
 import { SoundButton } from './sound/sound-button';
 import { Button, Card, Progress, Text } from './ui';
 import type { AstroLook } from './space/astro-art';
@@ -11,7 +13,7 @@ import { Guide } from './space/guide';
 /** Aula em telas: o texto aparece em partes (nunca tudo de uma vez), como no protótipo. */
 const TIPS = ['Faz sentido?', 'Esse atalho ajuda muito.', 'Guarda esse truque.'];
 
-export function SlidesPlayer({ lessonId, slides, onCompleted, look }: { lessonId: string; slides: Slide[]; onCompleted: (r: unknown) => void; look?: AstroLook | null }) {
+export function SlidesPlayer({ lessonId, slides, onCompleted, look, narration }: { lessonId: string; slides: Slide[]; onCompleted: (r: unknown) => void; look?: AstroLook | null; narration?: Narration | null }) {
   const { api } = useSession();
   const [i, setI] = useState(0);
   const [part, setPart] = useState(0);
@@ -24,8 +26,14 @@ export function SlidesPlayer({ lessonId, slides, onCompleted, look }: { lessonId
   const parts = s.textParts?.length ? s.textParts : [s.text];
   const lastPart = part >= parts.length - 1;
   const lastSlide = i >= slides.length - 1;
+  // narração: `say` da tela (uma vez, ao abrir) ou título + cada parte do texto conforme aparece
+  const narrator = useNarrator(narration);
+  const buttonText = s.say ? speakable(s.say) : slideSpeech({ heading: s.heading, text: parts.slice(0, part + 1).join(' ') });
+  const autoText = s.say ? (part === 0 ? speakable(s.say) : '') : part === 0 ? slideSpeech({ heading: s.heading, text: parts[0] }) : speakable(parts[part]);
+  useAutoSpeak(narrator, `${i}-${part}`, autoText);
 
   async function next() {
+    narrator.stop(); // a fala da tela anterior para quando avança
     if (!lastPart) return setPart(part + 1);
     sound.stop();
     if (!lastSlide) { setI(i + 1); setPart(0); return; }
@@ -42,7 +50,10 @@ export function SlidesPlayer({ lessonId, slides, onCompleted, look }: { lessonId
         <Guide look={look} mood={sound.playing ? 'wave' : 'idle'} text={i === 0 && part === 0 ? (hasSound ? 'Aumenta o volume: essa aula é de ouvido.' : 'Bora entender isso rapidinho.') : lastSlide && lastPart ? 'Pronto pra praticar?' : demos.length && lastPart ? 'Toque nos sons e repare na diferença.' : TIPS[i % TIPS.length]} />
       </View>
       <Card style={{ marginTop: 8, minHeight: 260, padding: 22 }}>
-        {!!s.heading && <Text weight="black" size={22}>{s.heading}</Text>}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+          {!!s.heading && <Text weight="black" size={22} style={{ flex: 1 }}>{s.heading}</Text>}
+          <NarrationButton narrator={narrator} text={buttonText} />
+        </View>
         <View style={{ marginTop: 12, gap: 10 }}>
           {parts.slice(0, part + 1).map((t, k) => <Text key={k} size={17} style={{ lineHeight: 26 }}>{t}</Text>)}
         </View>

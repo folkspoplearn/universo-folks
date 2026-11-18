@@ -29,6 +29,15 @@ export function productionConfigProblems(env: Env): string[] {
   if ((env.CORS_ORIGINS ?? '').split(',').some((o) => o.trim() === '*')) {
     problems.push('CORS_ORIGINS não pode ser "*" (a sessão usa credenciais)');
   }
+  if (env.VERCEL) {
+    // sem processo sempre ligado, as tarefas agendadas dependem do Vercel Cron autenticado
+    const cron = env.CRON_SECRET ?? '';
+    if (cron.length < 16 || PLACEHOLDER.test(cron)) problems.push('CRON_SECRET obrigatório na Vercel (16+ caracteres aleatórios)');
+    // Supabase: no pooler em modo transação o Prisma precisa de pgbouncer=true (sem prepared statements)
+    if (/pooler\.supabase\.com:6543/.test(env.DATABASE_URL ?? '') && !/pgbouncer=true/.test(env.DATABASE_URL ?? '')) {
+      problems.push('DATABASE_URL do pooler do Supabase (porta 6543) precisa de ?pgbouncer=true&connection_limit=1');
+    }
+  }
   return problems;
 }
 

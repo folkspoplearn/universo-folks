@@ -75,6 +75,10 @@ Roteiro de teste: `backend/test/e2e/arquivar-e-recriar-curso.mjs`.
 - Libere os planetas para as empresas (`/companies/{id}/planets`) e publique.
 
 ## Cursos de som (violão, canto)
+- Narração (Escola, ADR 0017):
+  - `say` na tela (lido ao abrir) e na questão (lido antes de responder);
+  - `narration: "auto"|"button"` no curso e `grade` no planeta (`1`–`9`, `m1`–`m3`).
+  - Em `para-a-escola`, `speakAfterAnswer` com lang `en*` e texto em português vira `say` em pt-BR (aviso `narration.lang_fixed`). Curso sem `narration`: 1º ano fica `auto` e as outras séries ficam `button`.
 - Tela de aula com sons: `audioDemos: [{ label, caption?, sequence }]` (notas sintetizadas) ou `[{ label, url }]` (arquivo). A importação valida a sequência (`soundSequenceSchema`) e recusa som sem `sequence` nem `url`.
 - Questão com som: `audio` = `{kind:"NOTES", sequence}` | `{kind:"URL", url}` | `{kind:"TTS", lang, text}`. Sem `kind`, o adaptador deduz pelo campo (`sequence` → NOTES, `url` → URL, senão TTS).
 - Microfone: `SIMULATOR` com `simulator.id = "mic_pitch"` e `target`/`targets` válidos (erro `simulator.mic_pitch_target` se faltar). Não gera mais o aviso `simulator.rule_pending`.

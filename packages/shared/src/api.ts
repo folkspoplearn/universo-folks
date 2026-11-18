@@ -5,6 +5,7 @@ import type {
 } from './types';
 import type { AnswerPayload, PublicQuestion } from './questions';
 import type { LessonVideo, VideoProgressResult } from './video';
+import type { Narration } from './narration';
 import type { Entitlements, Hangar, MyCompany, Preferences, Progress, PublicTier } from './account';
 
 type Fetch = typeof fetch;
@@ -144,7 +145,7 @@ export function createApiClient(o: ApiClientOptions) {
     learning: {
       trail: (courseId: string) => get<Trail>(`/learning/courses/${courseId}/trail`),
       lesson: (lessonId: string) =>
-        get<{ id: string; type: string; title: string; xpReward: number; courseId: string; content?: { slides: Slide[] }; video?: LessonVideo; questionSource?: 'BANK' | 'GENERATED'; questionsPerRound?: number | null; questions?: PublicQuestion[]; generators?: string[]; questionCount?: number | null; isReview?: boolean; passingPct?: number }>(`/learning/lessons/${lessonId}`),
+        get<{ id: string; type: string; title: string; xpReward: number; courseId: string; narration?: Narration | null; content?: { slides: Slide[] }; video?: LessonVideo; questionSource?: 'BANK' | 'GENERATED'; questionsPerRound?: number | null; questions?: PublicQuestion[]; generators?: string[]; questionCount?: number | null; isReview?: boolean; passingPct?: number }>(`/learning/lessons/${lessonId}`),
       completeLesson: (lessonId: string) => post<unknown>(`/learning/lessons/${lessonId}/complete`),
       videoProgress: (lessonId: string, watchedSeconds: number, ended = false) => post<VideoProgressResult>(`/learning/lessons/${lessonId}/video-progress`, { watchedSeconds: Math.floor(watchedSeconds), ended }),
       /** prática GERADA no aparelho (treino de ouvido, microfone): o app corrige e informa acertos/total */

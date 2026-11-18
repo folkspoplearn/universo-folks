@@ -9,7 +9,7 @@
 ## Aluno
 - `GET /billing/tiers` (público): planos de acesso ativos (Básico, Premium, Premium Plus) com galáxias e preços B2C ativos, para a tela de assinatura. `GET /billing/plans` lista só os preços ativos.
 - `GET /catalog/home|categories|planets|planets/{slug}|assignments|search`.
-- `GET /learning/me/snapshot`, `GET /learning/courses/{id}/trail`, `GET /learning/lessons/{id}`.
+- `GET /learning/me/snapshot`, `GET /learning/courses/{id}/trail`, `GET /learning/lessons/{id}`. A etapa traz `narration` (`auto`|`button`|null, do curso), e as questões trazem `say`. A preferência do aluno vai em `PATCH /me/preferences {narration}`.
 - `POST /learning/lessons/{id}/complete|video-progress|practice|practice-result`.
 - Resposta de questão (`practice`, `exam-attempts/{id}/submit`, `infinite/finish`): `{questionId, optionIds | value | sequence | pairs | assignments | simulator, timeMs?}`. O campo depende do tipo (ver `knowledge/produto/tipos-de-questao-e-widgets.md`).
 - `POST /learning/courses/{id}/infinite/start|finish`, `POST /learning/courses/{id}/exam/start`, `POST /learning/exam-attempts/{id}/submit`.

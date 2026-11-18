@@ -28,6 +28,7 @@ class UpdatePreferencesDto {
   @IsOptional() @IsBoolean() soundEffects?: boolean;
   @IsOptional() @IsBoolean() questionTimer?: boolean;
   @IsOptional() @IsBoolean() reduceAnimations?: boolean;
+  @IsOptional() @IsBoolean() narration?: boolean;
   @IsOptional() @IsIn([20, 50, 100, 150]) dailyGoalXp?: number;
   @IsOptional() @IsBoolean() dailyReminder?: boolean;
   @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/) reminderTime?: string;

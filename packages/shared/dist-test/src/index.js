@@ -47,6 +47,7 @@ __exportStar(require("./pitch"), exports);
 __exportStar(require("./ear-training"), exports);
 __exportStar(require("./questions"), exports);
 __exportStar(require("./video"), exports);
+__exportStar(require("./narration"), exports);
 __exportStar(require("./visual"), exports);
 exports.tokens = __importStar(require("./tokens"));
 var tokens_1 = require("./tokens");

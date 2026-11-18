@@ -23,7 +23,13 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./public/icons/favicon-48.png",
+      "name": "Universo Folks",
+      "shortName": "Folks",
+      "lang": "pt-BR",
+      "description": "Aprender um pouco todo dia: planetas, trilhas e práticas.",
+      "themeColor": "#03040f",
+      "backgroundColor": "#03040f"
     },
     "plugins": [
       "expo-router",

@@ -13,8 +13,9 @@ const monorepoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // imagem Docker enxuta (deploy/docker/web.Dockerfile): server.js + só as dependências usadas
-  output: 'standalone',
+  // imagem Docker enxuta (deploy/docker/web.Dockerfile define NEXT_OUTPUT=standalone).
+  // Na Vercel fica o padrão: a própria Vercel empacota o Next.
+  output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
   outputFileTracingRoot: monorepoRoot,
   turbopack: {
     root: monorepoRoot,

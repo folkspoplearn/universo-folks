@@ -221,8 +221,12 @@ export class LearningService {
 
   // =================================================================== lições
   async getLesson(user: AuthUser, lessonId: string) {
-    const { lesson } = await this.assertLessonUnlocked(user, lessonId);
-    const base = { id: lesson.id, code: lesson.code, type: lesson.type, title: lesson.title, description: lesson.description, xpReward: lesson.xpReward, courseId: lesson.unit.courseId };
+    const { lesson, course } = await this.assertLessonUnlocked(user, lessonId);
+    const base = {
+      id: lesson.id, code: lesson.code, type: lesson.type, title: lesson.title, description: lesson.description, xpReward: lesson.xpReward, courseId: lesson.unit.courseId,
+      /** narração em voz alta do curso: "auto" | "button" | null (o app respeita a preferência do aluno) */
+      narration: course.narration === 'auto' || course.narration === 'button' ? course.narration : null,
+    };
     if (lesson.type === 'LESSON') return { ...base, content: lesson.content };
     if (lesson.type === 'VIDEO') {
       return {
@@ -688,7 +692,7 @@ export class LearningService {
         if (done < before.length) throw new ForbiddenException('Conclua as etapas anteriores da trilha primeiro');
       }
     }
-    return { lesson: lesson as LessonWithUnit };
+    return { lesson: lesson as LessonWithUnit, course };
   }
 
   private assertResult(r: GeneratedResult, expected?: number | null) {

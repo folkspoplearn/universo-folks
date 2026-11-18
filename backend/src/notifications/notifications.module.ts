@@ -43,5 +43,5 @@ export class RemindersJob {
   }
 }
 
-@Module({ providers: [PushSender, RemindersJob], exports: [PushSender] })
+@Module({ providers: [PushSender, RemindersJob], exports: [PushSender, RemindersJob] })
 export class NotificationsModule {}

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { QUESTION_TYPE_LABEL, colors, errorMessage, isAnswered, micChallengeOf, radius, soundOf, type AnswerPayload, type PublicQuestion } from '@folks/shared';
+import { QUESTION_TYPE_LABEL, colors, errorMessage, isAnswered, micChallengeOf, questionSpeech, radius, soundOf, type AnswerPayload, type Narration, type PublicQuestion } from '@folks/shared';
+import { useAutoSpeak, useNarrator } from '@/lib/narrator';
+import { NarrationButton } from './sound/narration-button';
 import { useSession } from '@/lib/session';
 import { Button, Card, Progress, Text, s as ui } from './ui';
 import { QuestionVisual } from './question-visual';
@@ -20,7 +22,7 @@ type Item = {
 type Result = { correct: number; total: number; scorePct: number; xpEarned: number; items: Item[] };
 
 /** Prática do banco: uma questão por vez; a correção é feita no servidor ao final (ADR 0011). */
-export function PracticePlayer({ lessonId, questions, onFinished, look }: { lessonId: string; questions: PublicQuestion[]; onFinished: () => void; look?: AstroLook | null }) {
+export function PracticePlayer({ lessonId, questions, onFinished, look, narration }: { lessonId: string; questions: PublicQuestion[]; onFinished: () => void; look?: AstroLook | null; narration?: Narration | null }) {
   const { api } = useSession();
   const [i, setI] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Draft>>({});
@@ -34,7 +36,14 @@ export function PracticePlayer({ lessonId, questions, onFinished, look }: { less
   const a = answers[q?.id];
   const set = (d: Draft) => setAnswers((st) => ({ ...st, [q.id]: { ...st[q.id], ...d } }));
 
+  // narração: a pergunta (say ou enunciado) ao abrir; no fim, o resultado da rodada
+  const narrator = useNarrator(narration);
+  const resultText = result ? `Você acertou ${result.correct} de ${result.total}. ${result.scorePct >= 70 ? 'Mandou bem!' : 'Bora revisar e tentar de novo?'}` : '';
+  const speech = result ? resultText : q ? questionSpeech(q) : '';
+  useAutoSpeak(narrator, result ? 'resultado' : (q?.id ?? ''), speech);
+
   async function next() {
+    narrator.stop();
     const timed = { ...answers, [q.id]: { ...answers[q.id], timeMs: Date.now() - started.current } };
     setAnswers(timed);
     if (i < questions.length - 1) return setI(i + 1);
@@ -55,6 +64,7 @@ export function PracticePlayer({ lessonId, questions, onFinished, look }: { less
           <Astronaut mood={result.scorePct >= 70 ? 'celebrate' : 'wave'} look={look} width={110} />
           <Text weight="black" size={22} style={{ marginTop: 4 }}>{result.correct} de {result.total} certas</Text>
           <Text tone="muted">{result.scorePct >= 70 ? 'Mandou bem!' : 'Bora revisar e tentar de novo?'}  ·  <Text tone="amber" weight="black">+{result.xpEarned} XP</Text></Text>
+          <View style={{ marginTop: 10 }}><NarrationButton narrator={narrator} text={resultText} /></View>
         </Card>
         {questions.map((x, k) => {
           const it = byId.get(x.id);
@@ -77,7 +87,10 @@ export function PracticePlayer({ lessonId, questions, onFinished, look }: { less
     <View>
       <Progress value={(i / questions.length) * 100} />
       <Card style={{ marginTop: 16, padding: 20 }}>
-        <Text tone="amber" weight="black" size={11} style={{ letterSpacing: 0.6 }}>{QUESTION_TYPE_LABEL[q.type].toUpperCase()} · {i + 1}/{questions.length}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text tone="amber" weight="black" size={11} style={{ letterSpacing: 0.6, flex: 1 }}>{QUESTION_TYPE_LABEL[q.type].toUpperCase()} · {i + 1}/{questions.length}</Text>
+          <NarrationButton narrator={narrator} text={speech} />
+        </View>
         <Text weight="black" size={19} style={{ marginTop: 6 }}>{q.prompt}</Text>
         <QuestionVisual visual={q.visual} />
         <QuestionSound key={q.id} spec={soundOf(q.audio)} />

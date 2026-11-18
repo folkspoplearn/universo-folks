@@ -29,6 +29,7 @@ import { DashboardsModule } from './dashboards/dashboards.module';
 import { InteractiveModule } from './interactive/interactive.module';
 import { McpModule } from './mcp/mcp.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CronModule } from './cron/cron.module';
 import { ContentImportModule } from './content-import/content-import.module';
 import { PracticeCatalogModule } from './practice-catalog/practice-catalog.module';
 import { PlanTiersModule } from './plan-tiers/plan-tiers.module';
@@ -37,7 +38,9 @@ import { HealthController } from './health.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ScheduleModule.forRoot(),
+    // na Vercel (serverless) não há processo sempre ligado: o Vercel Cron chama /api/cron/:job
+    ...(process.env.VERCEL ? [] : [ScheduleModule.forRoot()]),
+    CronModule,
     // limite geral generoso; rotas de login/cadastro/senha têm limite próprio (@Throttle)
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 600 }]),
     EmailModule,

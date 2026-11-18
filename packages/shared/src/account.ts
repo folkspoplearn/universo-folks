@@ -49,6 +49,8 @@ export interface Preferences {
   soundEffects: boolean;
   questionTimer: boolean;
   reduceAnimations: boolean;
+  /** narração em voz alta nos cursos que têm (Escola) */
+  narration: boolean;
   dailyGoalXp: 20 | 50 | 100 | 150;
   dailyReminder: boolean;
   reminderTime: string;

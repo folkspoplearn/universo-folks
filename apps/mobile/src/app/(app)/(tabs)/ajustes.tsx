@@ -54,6 +54,7 @@ export default function Ajustes() {
           <>
             <SwitchRow label="Efeitos sonoros" sub="Sons de acerto e erro. O áudio das aulas continua tocando." value={p.soundEffects} onChange={(v) => savePrefs.mutate({ soundEffects: v })} />
             <SwitchRow label="Cronômetro nas perguntas" sub="Responder rápido vale mais XP. Desligado, todo acerto vale 10 XP." value={p.questionTimer} onChange={(v) => savePrefs.mutate({ questionTimer: v })} />
+            <SwitchRow label="Narração em voz alta" sub="Nos cursos da Escola, a voz do celular lê as telas e as perguntas. No 1º ano lê sozinha; nos outros, pelo botão 🔊." value={p.narration ?? true} onChange={(v) => savePrefs.mutate({ narration: v })} />
             <SwitchRow label="Reduzir animações" sub="Deixa o astronauta e a tela mais quietos." value={p.reduceAnimations} onChange={(v) => savePrefs.mutate({ reduceAnimations: v })} />
             <View style={{ paddingHorizontal: 16, paddingTop: 14, gap: 4 }}>
               <Text weight="bold">Meta diária</Text>

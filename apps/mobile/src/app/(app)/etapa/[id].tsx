@@ -51,13 +51,13 @@ export default function Etapa() {
               {!done && <View style={{ marginTop: 14 }}><Guide mood="wave" look={look} text="Vídeo curto e direto ao ponto. Depois, a prática fixa o que você viu." /></View>}
             </>
           ) : l.type === 'LESSON' && l.content?.slides?.length ? (
-            done ? null : <SlidesPlayer lessonId={l.id} slides={l.content.slides} onCompleted={completed} look={look} />
+            done ? null : <SlidesPlayer lessonId={l.id} slides={l.content.slides} onCompleted={completed} look={look} narration={l.narration} />
           ) : l.type === 'PRACTICE' && l.questionSource === 'GENERATED' && l.generators?.length ? (
             <GeneratedPractice lessonId={l.id} generators={l.generators} count={l.questionCount ?? 8} look={look}
               onFinished={async () => { await refreshTrail(); router.back(); }}
               onNext={async (next) => { await refreshTrail(); router.replace(`/etapa/${next}`); }} />
           ) : l.type === 'PRACTICE' && l.questions?.length ? (
-            <PracticePlayer lessonId={l.id} questions={l.questions} look={look} onFinished={async () => { await refreshTrail(); router.back(); }} />
+            <PracticePlayer lessonId={l.id} questions={l.questions} look={look} narration={l.narration} onFinished={async () => { await refreshTrail(); router.back(); }} />
           ) : (
             <Card><Text tone="muted">{l.type === 'VIDEO' ? 'O vídeo desta etapa ainda não foi definido.' : l.type === 'PRACTICE' ? 'Esta prática é gerada no aparelho e ainda não está disponível.' : 'Este conteúdo ainda não está disponível.'}</Text></Card>
           )}

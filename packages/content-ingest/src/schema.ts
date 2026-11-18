@@ -68,6 +68,10 @@ export const audioDemoSchema = z
   .object({ label: z.string().min(1), caption: z.string().optional(), sequence: soundSequenceSchema.optional(), url: httpUrl.optional() })
   .refine((d) => !!d.sequence !== !!d.url, 'cada som da tela precisa de "sequence" (notas) OU "url" (arquivo)');
 const speakSchema = z.object({ lang: z.string().min(2), text: z.string().min(1) });
+/** narração (voz do aparelho em pt-BR): texto lido em voz alta para quem ainda não lê */
+const saySchema = z.string().min(1).max(600);
+/** "auto" = lê sozinho a cada tela e pergunta (1º ano); "button" = só pelo botão de alto-falante */
+export const NARRATION_MODES = ['auto', 'button'] as const;
 
 const questionBase = {
   prompt: z.string().min(3),
@@ -78,7 +82,10 @@ const questionBase = {
   visual: visualSchema.optional(),
   visualAfterAnswer: visualSchema.optional(),
   audio: audioSchema.optional(),
+  /** frase falada DEPOIS da resposta (ex.: a frase em inglês já completa) */
   speakAfterAnswer: speakSchema.optional(),
+  /** narração da pergunta, lida ANTES de responder (sem ela, a narração lê o enunciado) */
+  say: saySchema.optional(),
 };
 
 export const choiceQuestionSchema = z.object({ ...questionBase, type: z.enum(CHOICE_TYPES), options: z.array(optionSchema).min(2).max(8) });
@@ -118,6 +125,8 @@ export const slideSchema = z.object({
   check: questionSchema.optional(),
   /** sons da tela (aula de som: em vez de vídeo, o aluno ouve notas, acordes ou um áudio) */
   audioDemos: z.array(audioDemoSchema).max(12).optional(),
+  /** narração ao abrir a tela (sem ela, a narração lê título + texto) */
+  say: saySchema.optional(),
 });
 
 /** Gerador de questões com os dados que ele usa (prática infinita). */
@@ -188,6 +197,8 @@ export const courseSchema = z.object({
   drillLabel: z.string().optional(),
   /** código do modelo de trilha (menu Personalização de trilha) que o curso segue; a importação confere a estrutura */
   trailTemplate: z.string().optional(),
+  /** narração do curso: "auto" lê sozinho (1º ano), "button" só pelo botão; sem campo = sem narração (exceto Escola) */
+  narration: z.enum(NARRATION_MODES).optional(),
   /** vazio só para curso "Em breve" (COMING_SOON) — regra checada na validação */
   units: z.array(unitSchema),
   exam: examSchema.nullable().optional(),
@@ -208,6 +219,8 @@ export const planetSchema = z.object({
   sortOrder: z.number().int().optional(),
   /** pasta do Vimeo do planeta (id, link .../folder/<id> ou /projects/<id>): base do quadro "Organizar vídeos" */
   vimeoFolder: z.string().optional(),
+  /** série escolar (Para a escola): "1" a "9" no fundamental, "m1" a "m3" no médio */
+  grade: z.string().regex(/^([1-9]|m[1-3])$/).optional(),
   courses: z.array(courseSchema),
 });
 

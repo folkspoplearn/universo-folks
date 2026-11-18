@@ -27,7 +27,7 @@ export interface QuestionStorage {
 /** Formato canônico -> linhas do banco. */
 export function toStorage(q: Question): QuestionStorage {
   const media: Record<string, unknown> = {};
-  for (const k of ['visual', 'visualAfterAnswer', 'audio', 'speakAfterAnswer'] as const) if (q[k] !== undefined) media[k] = q[k];
+  for (const k of ['visual', 'visualAfterAnswer', 'audio', 'speakAfterAnswer', 'say'] as const) if (q[k] !== undefined) media[k] = q[k];
   let data: Record<string, unknown> | null = null;
   switch (q.type) {
     case 'NUMBER': data = { answer: q.answer, ...(q.tolerance !== undefined ? { tolerance: q.tolerance } : {}) }; break;
@@ -105,6 +105,7 @@ export function publicQuestion(q: PublicSource, opts: { shuffleOptions?: boolean
     timeLimitMs: q.timeLimitMs ?? null,
     ...(m.visual ? { visual: m.visual } : {}),
     ...(m.audio ? { audio: m.audio } : {}),
+    ...(typeof m.say === 'string' ? { say: m.say } : {}),
   };
   switch (q.type) {
     case 'NUMBER':

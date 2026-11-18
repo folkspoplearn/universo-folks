@@ -15,7 +15,11 @@ NOW="$(date -u +%Y%m%d%H%M%S)"
 LAST="$(ls prisma/migrations 2>/dev/null | grep -E '^[0-9]{14}_' | sort | tail -1 | cut -c1-14)"
 if [ -n "$LAST" ] && [ "$NOW" -le "$LAST" ]; then NOW=$((LAST + 1)); fi
 DIR="prisma/migrations/${NOW}_${NAME}"
-SQL="$(npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script 2>/dev/null | grep -v '^For more information' || true)"
+# banco fora do ar não pode virar "nada a migrar": o diff precisa ter rodado de verdade
+if ! RAW="$(npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --script 2>&1)"; then
+  echo "✘ o diff falhou (o banco de dev está no ar?):"; echo "$RAW" | grep -vE '^(warn|For more information)' | tail -5; exit 1
+fi
+SQL="$(echo "$RAW" | grep -vE '^(warn |For more information|https://pris.ly)' || true)"
 if [ -z "$(echo "$SQL" | grep -v '^--' | tr -d '[:space:]')" ] || echo "$SQL" | grep -q 'This is an empty migration'; then
   echo "Nada a migrar: banco de dev já está em sincronia com o schema."; exit 0
 fi

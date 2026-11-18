@@ -43,6 +43,11 @@ O MASTER vê tudo isso dentro do detalhe de cada empresa (mesmos componentes, `c
 Início, cursos, planeta, trilha, **vídeo do Vimeo**, aula em telas e prática com todos os tipos de questão (corrigida no servidor).
 
 ## App (`apps/mobile`)
+> **PWA (ADR 0018):** enquanto não está nas lojas, o mesmo app roda como PWA na Vercel (`expo export -p web`).
+> - Instala na tela inicial, abre em tela cheia e abre offline (sem a API).
+> - Cartão "Instale o Universo Folks" na tela de entrar e no Início: no Android, botão Instalar; no iPhone, Compartilhar → Adicionar à Tela de Início.
+> - Na web, a sessão fica no `localStorage` e não cai ao fechar o app.
+> - Sem compras nas lojas nem push.
 - **Visual do protótipo (`src/components/space/`):**
   - **fundo espacial animado** em todas as telas: nebulosas, estrelas em 3 camadas andando em paralaxe, estrelas piscando e cometa; fica parado com "reduzir movimento";
   - **trilha em caminho**: faixa colorida da unidade (cadeado com o plano quando bloqueada), etapas redondas em zigue-zague com volume, etapa atual maior com anel pulsando e balão "COMEÇAR"/"CONTINUAR", figurinhas do planeta flutuando (`visual.orbitIcons`) e o **astronauta** do tema ao lado (`visual.look`: cabeça, pose, objeto, ex.: placa ✓ no Feedback);
@@ -55,7 +60,8 @@ Início, cursos, planeta, trilha, **vídeo do Vimeo**, aula em telas e prática 
   - **Hangar** (personalização do astronauta): traje, detalhes, viseira, cabeça e costas (`GET /me/hangar`, `PUT /me/hangar/:itemId`). Item liberado por nível (cada 200 XP) ou exclusivo Premium; tocar num bloqueado explica o que falta. A roupa escolhida aparece no **astronauta de todas as telas** (`outfitOf` no `@folks/shared`); o figurino do planeta (cabeça, costas, objeto) continua por cima.
   - **Empresa:** empresa, situação (Em dia, Atrasado…), áreas, trilhas obrigatórias com progresso e prazo (tocar abre o curso) e ranking das áreas (`GET /me/company`).
   - **Premium:** plano atual, benefícios e os planos de acesso do menu Planos do MASTER (Básico, Premium, Premium Plus) com as galáxias e os preços ativos (`GET /billing/tiers`, público). Preço zerado ou sem preço ativo aparece como "Preço em breve". A compra é pelas lojas (RevenueCat, `src/lib/purchases.ts`); enquanto o SDK e as chaves não estão configurados, "Assinar" e "Restaurar compras" explicam que a assinatura chega na versão publicada. Quem está na empresa não vê o Premium.
-  - **Ajustes:** perfil (como quer ser chamado), Experiência (efeitos sonoros, cronômetro, **reduzir animações**, meta diária 20/50/100/150 XP, lembrete e horário), Empresa (entrar com código, só para quem não tem empresa), trocar perfil, Conta (trocar senha, assinatura, sair). "Reduzir animações" para o fundo, o astronauta e a trilha, assim como o "reduzir movimento" do aparelho (`useStill`).
+  - **Ajustes:** perfil (como quer ser chamado), Experiência (efeitos sonoros, cronômetro, **narração em voz alta**, **reduzir animações**, meta diária 20/50/100/150 XP, lembrete e horário), Empresa (entrar com código, só para quem não tem empresa), trocar perfil, Conta (trocar senha, assinatura, sair). "Reduzir animações" para o fundo, o astronauta e a trilha, assim como o "reduzir movimento" do aparelho (`useStill`).
+  - **Narração em voz alta** (cursos da Escola, ADR 0017): voz do aparelho em pt-BR (`expo-speech`), botão 🔊 Ouvir/Parar na tela da aula e na pergunta. No curso `auto` (1º ano), lê sozinho a tela (`say` ou título + cada parte do texto), a pergunta (`say` ou enunciado) e o resultado da rodada. A fala para quando a pessoa avança, toca outro som ou sai da tela, e toca mesmo no silencioso do iPhone. Desligada nos Ajustes, nem o automático fala (`useNarrator`, `useAutoSpeak`).
 - **Som e microfone (ADR 0015):**
   - **Aula de som:** telas com botões "Ouvir" (notas, acordes e tons sintetizados no aparelho, sem internet, ou arquivo de áudio); selo "🎧 AULA DE SOM".
   - **Ouça e responda:** a questão toca o som sozinha e tem "Ouvir de novo"; a voz do aparelho (TTS) também toca.

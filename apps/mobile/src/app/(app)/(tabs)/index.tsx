@@ -6,6 +6,7 @@ import { colors, fmt } from '@folks/shared';
 import { useSession } from '@/lib/session';
 import { PlanetGrid } from '@/components/planet-card';
 import { Card, ErrorBox, Loading, Progress, Screen, Text } from '@/components/ui';
+import { InstallApp } from '@/components/install-app';
 
 export default function Inicio() {
   const { api } = useSession();
@@ -22,6 +23,7 @@ export default function Inicio() {
 
   return (
     <Screen>
+      <InstallApp compact />
       <Text tone="muted">{fmt.greeting()},</Text>
       <Text weight="black" size={28}>{h.greetingName} 👋</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>

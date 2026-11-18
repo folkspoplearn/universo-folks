@@ -283,6 +283,8 @@ model UserPreferences {
   soundEffects     Boolean  @default(true) @map("sound_effects")
   questionTimer    Boolean  @default(true) @map("question_timer")
   reduceAnimations Boolean  @default(false) @map("reduce_animations")
+  /// narração em voz alta nos cursos que têm (Escola); desligar = nem o automático fala
+  narration        Boolean  @default(true)
   dailyGoalXp      Int      @default(100) @map("daily_goal_xp")
   dailyReminder    Boolean  @default(true) @map("daily_reminder")
   reminderTime     String   @default("19:00") @map("reminder_time") /// HH:mm
@@ -614,6 +616,8 @@ model Course {
   gameConfig       Json?         @map("game_config")
   /// modelo de trilha que o curso segue (menu Personalização de trilha)
   trailTemplateId  String?       @map("trail_template_id") @db.Uuid
+  /// narração em voz alta: "auto" (lê sozinho, 1º ano) | "button" (só pelo alto-falante) | null (sem narração)
+  narration        String?
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @updatedAt @map("updated_at")
 

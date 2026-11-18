@@ -8,6 +8,7 @@ export * from './pitch';
 export * from './ear-training';
 export * from './questions';
 export * from './video';
+export * from './narration';
 export * from './visual';
 export * as tokens from './tokens';
 export { colors, font, radius, space, badgeColor, badgeLabel, planetColor } from './tokens';

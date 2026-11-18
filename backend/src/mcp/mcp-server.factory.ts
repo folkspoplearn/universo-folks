@@ -53,6 +53,11 @@ Fluxo recomendado ao receber "crie o planeta X com estes vídeos":
    de outro módulo, fora de ordem, não usado). Corrija com organize_planet_videos só com o OK do usuário.
    O MASTER também corrige pelo painel: Conteúdo > planeta > Organizar vídeos.
 
+Cursos da ESCOLA (para-a-escola) — narração em voz alta (voz do aparelho em pt-BR):
+ - No curso: narration "auto" (1º ano: lê sozinho cada tela e pergunta) ou "button" (só pelo botão de alto-falante).
+ - Na tela: "say" (o que se lê ao abrir; sem ele, lê título + texto). Na questão: "say" (lido ANTES de responder; sem ele, lê o enunciado). Sempre em português.
+ - "speakAfterAnswer" é só para a frase em outro idioma falada DEPOIS da resposta (inglês, lang "en-US"). Nunca use para narrar em português.
+
 Cursos de SOM (violão, canto, música, pronúncia) — em vez de vídeo, a etapa é só som:
  - Use o modelo de trilha "som-e-pratica" (aula de som + prática em cada unidade), salvo se o usuário pedir outro.
  - Aula de som = LESSON com "audioDemos" nas telas: [{label, caption, sequence}] (notas sintetizadas no aparelho) ou [{label, url}] (arquivo mp3/m4a).

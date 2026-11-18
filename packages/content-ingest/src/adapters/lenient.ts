@@ -316,7 +316,63 @@ function questionExtras(raw: Obj) {
     const v = pick(raw, [k]);
     if (isObj(v)) out[k] = k === 'audio' && !v.kind ? { kind: Array.isArray(v.sequence) ? 'NOTES' : typeof v.url === 'string' ? 'URL' : 'TTS', ...v } : v;
   }
+  const say = pickSay(raw);
+  if (say) out.say = say;
   return out;
+}
+
+/** narração: "say" (ou falar/narração), texto ou { text } */
+const SAY = ['say', 'falar', 'fala', 'narracao', 'narration', 'narrar'];
+function pickSay(o: Obj): string | undefined {
+  const v = pick(o, SAY);
+  const t = isObj(v) ? clean(v.text) : clean(v);
+  return t ? t.slice(0, 600) : undefined;
+}
+
+/** "auto" lê sozinho; "button" só pelo botão */
+function narrationMode(o: Obj): 'auto' | 'button' | undefined {
+  const v = pick(o, ['narration', 'narr', 'narracao', 'narrador']);
+  if (v === true) return 'button';
+  const k = keyNorm(String(v ?? ''));
+  if (!k) return undefined;
+  if (/^(auto|automatic|automatica|automatico|sempre)$/.test(k)) return 'auto';
+  if (/^(button|botao|manual|tocar|sim|on)$/.test(k)) return 'button';
+  return undefined;
+}
+
+/** Texto em português? (para corrigir narração marcada como en-US por engano) */
+export function looksPortuguese(text: string): boolean {
+  const t = ` ${text.toLowerCase()} `;
+  if (/[ãõçáéíóúâêôà]/.test(t)) return true;
+  const pt = (t.match(/\b(que|qual|quais|quantos?|quantas?|toque|ouça|conte|figura|figuras|letra|número|numero|isso|são|com|uma?|da|do|das|dos|na|no|em|para|começa|palavra)\b/g) ?? []).length;
+  const en = (t.match(/\b(the|you|is|are|what|which|this|that|and|of|to|it|i|we|they|my|your|how|where|do|does)\b/g) ?? []).length;
+  return pt > en;
+}
+
+/**
+ * Escola: o export do protótipo põe a narração da pergunta em português como
+ * speakAfterAnswer com lang "en-US" (voz errada e só depois da resposta).
+ * Aqui ela vira `say` (lida antes, em pt-BR). Devolve quantas foram corrigidas.
+ */
+function fixSchoolNarration(courses: Course[]): number {
+  let fixed = 0;
+  const fix = (q: Question | undefined) => {
+    if (!q) return;
+    const s = q.speakAfterAnswer;
+    if (s && /^en/i.test(s.lang) && looksPortuguese(s.text)) {
+      if (!q.say) q.say = s.text;
+      delete q.speakAfterAnswer;
+      fixed++;
+    }
+  };
+  for (const c of courses) {
+    for (const u of c.units) for (const l of u.lessons) {
+      if (l.type === 'PRACTICE') l.questions.forEach(fix);
+      if (l.type === 'LESSON') l.slides.forEach((s) => fix(s.check));
+    }
+    c.exam?.questions?.forEach(fix);
+  }
+  return fixed;
 }
 
 const strList = (v: unknown): string[] | undefined => (Array.isArray(v) ? v.map((x) => clean(x) ?? '').filter(Boolean) : undefined);
@@ -420,6 +476,8 @@ function slidesFrom(o: Obj, title: string, ctx?: AdapterCtx, path = ''): Slide[]
           if (visualHtml) out.visualHtml = visualHtml;
           if (widget) out.widget = widget;
           if (check) out.check = check;
+          const say = pickSay(s);
+          if (say) out.say = say;
           // sons da tela (aula de som): notas sintetizadas ou arquivo de áudio
           const demosRaw = pickArr(s, ['audiodemos', 'demos', 'sons', 'audios', 'sounds']);
           if (demosRaw?.length) {
@@ -607,6 +665,7 @@ function adaptCourse(raw: unknown, path: string, ctx: AdapterCtx, planetSlug: st
     badge,
     drillLabel: pickStr(raw, ['drilllabel', 'nometreino']),
     trailTemplate: pickStr(raw, ['trailtemplate', 'modelotrilha', 'modelodetrilha', 'template', 'modelo']),
+    narration: narrationMode(raw),
     units,
     exam: holder.exam ?? null,
   } as Course;
@@ -628,6 +687,20 @@ function adaptPlanet(raw: unknown, path: string, ctx: AdapterCtx, index: number)
   const coursesRaw = pickArr(raw, A.courses) ?? [];
   const courses = coursesRaw.map((c, ci) => adaptCourse(c, `${path}.courses[${ci}]`, ctx, slug, ci)).filter((c): c is Course => !!c);
   const visual = pick(raw, ['visual']);
+
+  // série escolar: 1..9 (fundamental) e m1..m3 (médio)
+  const gradeRaw = keyNorm(String(pick(raw, ['grade', 'serie', 'ano', 'anoescolar']) ?? ''));
+  const grade = /^[1-9]$/.test(gradeRaw) ? gradeRaw : /^m[1-3]$/.test(gradeRaw) ? gradeRaw : undefined;
+  if (category === 'para-a-escola') {
+    const fixed = fixSchoolNarration(courses);
+    if (fixed) rep.warn(path, 'narration.lang_fixed', `${fixed} fala(s) em português estavam como speakAfterAnswer em en-US; viraram a narração da pergunta (say) em pt-BR`);
+    // 1º ano: a criança ainda não lê, então a narração é automática
+    for (const c of courses) {
+      if (c.narration) continue;
+      c.narration = grade === '1' ? 'auto' : 'button';
+      rep.info(`${path}.courses`, 'narration.default', `Curso "${c.title}": narração ${c.narration === 'auto' ? 'automática (1º ano)' : 'pelo botão de alto-falante'}`);
+    }
+  }
   return {
     key: pickStr(raw, A.key) ?? slug,
     slug,
@@ -641,6 +714,7 @@ function adaptPlanet(raw: unknown, path: string, ctx: AdapterCtx, index: number)
     visual: isObj(visual) ? visual : undefined,
     sortOrder: pickInt(raw, A.order),
     vimeoFolder: pickStr(raw, ['vimeofolder', 'vimeofolderuri', 'vimeofolderid', 'pastavimeo', 'pastadovimeo']),
+    ...(grade ? { grade } : {}),
     courses,
   };
 }

@@ -6,8 +6,10 @@ import { PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans
 import { colors } from '@folks/shared';
 import { Providers, useSession } from '@/lib/session';
 import { Offline } from '@/components/offline';
+import { setupPwa } from '@/lib/pwa';
 
 SplashScreen.preventAutoHideAsync();
+setupPwa(); // web: service worker, convite de instalação e destravar som/voz no iPhone
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold });

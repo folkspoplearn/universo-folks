@@ -13,6 +13,8 @@ interface Base {
   visual?: { kind: string; svg?: string; html?: string; url?: string };
   /** som da questão: voz (TTS), notas sintetizadas ou arquivo (ver soundOf) */
   audio?: { kind: 'TTS'; lang: string; text: string } | { kind: 'NOTES'; sequence: unknown[] } | { kind: 'URL'; url: string };
+  /** narração da pergunta, lida antes de responder (sem ela, lê o enunciado) */
+  say?: string;
 }
 export type PublicQuestion =
   | (Base & { type: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE'; options: Array<{ id: string; text: string }> })

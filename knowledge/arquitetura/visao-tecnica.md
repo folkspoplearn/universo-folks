@@ -6,9 +6,23 @@
 - **API:** Node.js 22+, TypeScript, NestJS 11, Prisma 6, PostgreSQL 16, Zod (schemas compartilhados com o MCP) e class-validator (DTOs).
 - **Web:** Next.js 16 (App Router) + Tailwind 4 + TanStack Query, com o visual do protótipo (ADR 0012).
 - **App:** React Native com Expo SDK 58 + Expo Router, publicado na App Store e no Google Play via EAS (ADR 0012).
-- **Infra:** VPS com Docker Compose + Caddy (HTTPS) + backup diário fora da VPS. Storage S3/R2 + CDN em produção.
+- **Infra (agora, ADR 0016):** banco no **Supabase**, API (função serverless) e web na **Vercel**, plano Hobby. Guia em `deploy/vercel-supabase.md`.
+- **Infra (depois):** VPS com Docker Compose + Caddy (HTTPS) + backup diário fora da VPS. Storage S3/R2 + CDN em produção.
 
-## Deploy (produção)
+## Deploy no Supabase + Vercel (atual)
+Detalhes, limitações e pendências na ADR 0016.
+- **API:** projeto da Vercel com raiz em `backend`, configurado por `backend/vercel.json`.
+  - `api/index.js` chama `dist/serverless.js` (`createApp()` de `app.factory.ts`). Todas as rotas são reescritas para a função.
+  - O cron é `GET /api/cron/:job` com `Bearer CRON_SECRET`; o `ScheduleModule` fica desligado quando `VERCEL` está definido.
+  - As migrações rodam no build de produção com o `DIRECT_URL` (session pooler).
+- **Web:** projeto da Vercel com raiz em `apps/web`, configurado por `apps/web/vercel.json`, que instala pelos workspaces da raiz.
+- **Supabase:**
+  - a API usa o transaction pooler (6543) com `pgbouncer=true&connection_limit=1`;
+  - a Data API fica fechada: RLS em todas as tabelas e papéis `anon`/`authenticated` sem acesso (migração `supabase_bloquear_data_api`);
+  - toda tabela nova precisa de `ENABLE ROW LEVEL SECURITY` na migração que a cria.
+- **Limitações:** 4,5 MB por requisição, SCORM/xAPI só com o driver do Supabase Storage (pendente) e cron 1x por dia no Hobby.
+
+## Deploy em VPS com Docker (para depois)
 Guia passo a passo em `deploy/README.md`.
 - **`deploy/docker-compose.yml`:** `postgres` (sem porta exposta), `migrate`, `api`, `web` e `caddy`.
   - `migrate` roda `prisma migrate deploy` a cada `up`, antes da API.

@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { colors, errorMessage } from '@folks/shared';
 import { useSession } from '@/lib/session';
 import { PlanetOrb } from '@/components/planet';
+import { InstallApp } from '@/components/install-app';
 import { Field, PasswordField } from '@/components/fields';
 import { Button, Card, Screen, Text } from '@/components/ui';
 
@@ -43,6 +44,7 @@ export default function Entrar() {
             </Pressable>
           </Link>
         </View>
+        <InstallApp />
       </KeyboardAvoidingView>
     </Screen>
   );

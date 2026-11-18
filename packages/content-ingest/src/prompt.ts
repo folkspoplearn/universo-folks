@@ -25,6 +25,7 @@ Regras:
   - Questão "ouça e responda": "audio": {"kind":"NOTES","sequence":[...]} ou {"kind":"URL","url":"https://..."} ou {"kind":"TTS","lang":"en-US","text":"..."}; methodology "listen_choose".
   - Prática no microfone (tocar ou cantar a nota): SIMULATOR {"simulator":{"id":"mic_pitch","target":"E2" ou "targets":["E2","A2"],"instrument":"violao"|"voz"}}; methodology "play_or_sing_note". Voz aceita qualquer oitava.
 - Telas (slides) podem ter textParts, widget {type,...}, check (uma questão "confere rapidinho") e audioDemos.
+- Narração em voz alta (cursos de "para-a-escola"): "say" na tela (lido ao abrir; sem ele, lê título + texto) e "say" na questão (lido ANTES de responder; sem ele, lê o enunciado), sempre em português. No curso, "narration": "auto" (1º ano: lê sozinho) ou "button" (só pelo botão). "speakAfterAnswer" é só para a frase em outro idioma falada DEPOIS da resposta (ex.: inglês, lang "en-US").
 - Práticas podem ter questionsPerRound e generators [{methodology, data}].
 - GENERATED_PRACTICE com som (gerado no aparelho): generators "pitch" (grave/agudo), "pitch_tone" (grave/agudo com tom puro), "pitch2", "qual" (maior/menor), "qual2", "deg", "deg2", "prog", "prog2", misturas "mix"/"ear"/"rev2"/"rev3"/"rev4"; no microfone: "tune" (afinar corda do violão), "sing" (cantar a nota), "sing_steps" (cantar Dó-Ré-Mi), misturas "voice"/"guitar".
 - Modelo de trilha (menu Personalização de trilha): se o curso segue um modelo, informe "trailTemplate": "<code do modelo>" no curso. A prévia avisa quando a estrutura das unidades foge do modelo.

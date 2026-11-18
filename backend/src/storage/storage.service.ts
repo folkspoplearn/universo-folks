@@ -1,4 +1,4 @@
-import { Global, Injectable, Module } from '@nestjs/common';
+import { Global, Injectable, Module, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { mkdir, rm, writeFile } from 'fs/promises';
 import { dirname, join, resolve, sep } from 'path';
@@ -24,6 +24,10 @@ export class StorageService {
   }
 
   async write(relPath: string, data: Buffer) {
+    // Vercel: o disco da função é somente leitura e não persiste entre instâncias
+    if (process.env.VERCEL) {
+      throw new ServiceUnavailableException('Envio de pacotes interativos (SCORM/xAPI) ainda não está disponível neste ambiente: falta ligar o armazenamento de arquivos (Supabase Storage).');
+    }
     const p = this.safePath(relPath);
     await mkdir(dirname(p), { recursive: true });
     await writeFile(p, data);
