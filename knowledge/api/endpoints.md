@@ -33,3 +33,5 @@
 ## Importação de conteúdo (MASTER)
 - `GET /master/content/imports/schema`, `POST /master/content/imports`, `POST /master/content/imports/upload`, `GET /master/content/imports[/{id}]`, `GET|PUT /master/content/imports/{id}/normalized`, `POST /master/content/imports/{id}/plan`, `POST /master/content/imports/{id}/apply`, `DELETE /master/content/imports/{id}`.
 - MCP: `content_import_format`, `preview_content_import`, `fix_content_import`, `apply_content_import`.
+
+- Assinatura (Asaas, web/PWA): `GET /billing/me/subscriptions`, `POST /billing/checkout {planId, cpfCnpj}`, `POST /billing/subscriptions/{id}/refresh` ("Já paguei"), `POST /billing/subscriptions/{id}/cancel`.

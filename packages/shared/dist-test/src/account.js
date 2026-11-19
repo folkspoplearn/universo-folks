@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.COMPANY_STATUS_LABEL = exports.DAILY_GOALS = exports.HANGAR_SLOTS = void 0;
 exports.outfitOf = outfitOf;
+exports.maskDocument = maskDocument;
 /** Abas do Hangar, na ordem e com os nomes do protótipo. */
 exports.HANGAR_SLOTS = [
     { slot: 'SUIT', label: 'Traje' },
@@ -25,6 +26,13 @@ function outfitOf(h, preview) {
     return out;
 }
 exports.DAILY_GOALS = [20, 50, 100, 150];
+/** CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) enquanto a pessoa digita. */
+function maskDocument(raw) {
+    const d = raw.replace(/\D/g, '').slice(0, 14);
+    if (d.length <= 11)
+        return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+    return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
 /** Situação do colaborador na empresa (GET /me/company → status). */
 exports.COMPANY_STATUS_LABEL = {
     INVITED: 'Convite enviado',

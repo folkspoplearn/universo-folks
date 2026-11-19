@@ -45,7 +45,7 @@ New Project → importar `folkspoplearn/universo-folks` → **Root Directory: `b
 | `VIMEO_ACCESS_TOKEN`, `VIMEO_EMBED_DOMAINS` | token do Vimeo e domínio da web |
 | `RESEND_API_KEY`, `EMAIL_FROM` | e-mail transacional (vazio = não envia) |
 | `REVENUECAT_WEBHOOK_AUTH`, `REVENUECAT_ACCEPT_SANDBOX` | quando ligar as lojas |
-| `ASAAS_API_KEY`, `ASAAS_API_URL`, `ASAAS_WEBHOOK_TOKEN` | quando ligar o Asaas |
+| `ASAAS_API_KEY`, `ASAAS_API_URL`, `ASAAS_WEBHOOK_TOKEN` | Premium na web/PWA e contratos de empresa (seção 5b) |
 
 A API **não sobe** se faltar alguma obrigatória, se um segredo for fraco ou estiver com o valor de exemplo, se faltar o `CRON_SECRET` ou se o pooler 6543 estiver sem `pgbouncer=true`. Nesse caso ela responde 503, e o motivo aparece nos logs da função.
 
@@ -87,6 +87,24 @@ O app abre em tela cheia e com o ícone do planeta. A tela inicial abre mesmo se
 | RevenueCat → webhook | `https://<api>/api/billing/webhooks/revenuecat` |
 | Asaas → webhook | `https://<api>/api/billing/webhooks/asaas` |
 | PWA e app (EAS) | `EXPO_PUBLIC_API_URL=https://<api>/api` |
+
+## 5b. Asaas (Premium na web/PWA e contratos de empresa)
+1. **Sandbox primeiro.** Crie a conta em **sandbox.asaas.com**, que é separada da conta real. Lá os pagamentos são simulados.
+2. Em **Integrações → Chave de API**, gere a chave. Na Vercel (projeto da API), configure:
+   - `ASAAS_API_KEY` = a chave (no sandbox começa com `$aact_hmlg_`);
+   - `ASAAS_API_URL` = `https://api-sandbox.asaas.com/v3`;
+   - `ASAAS_WEBHOOK_TOKEN` = `openssl rand -hex 24`.
+3. Em **Integrações → Webhooks**, crie um webhook:
+   - **URL:** `https://<api>/api/billing/webhooks/asaas`
+   - **Token de autenticação:** o mesmo `ASAAS_WEBHOOK_TOKEN`
+   - **Eventos de cobrança:** `PAYMENT_CREATED`, `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`, `PAYMENT_DELETED`
+   - **Eventos de assinatura:** `SUBSCRIPTION_DELETED`, `SUBSCRIPTION_INACTIVATED`
+   - Versão da API: v3. Envio sequencial, ativo.
+4. No painel da plataforma, como MASTER, abra o **menu Planos**, defina o preço do Premium e do Premium Plus (mensal e anual) e **ative**. Preço zero aparece como "Preço em breve".
+5. **Teste:** entre no PWA com uma conta de aluno, assine e pague a fatura do sandbox. No sandbox, o Pix tem a opção de simular o pagamento. O plano deve ser liberado em segundos (pelo webhook ou pelo "Já paguei").
+6. **Produção:** troque a `ASAAS_API_KEY` pela chave da conta real e a `ASAAS_API_URL` por `https://api.asaas.com/v3`. Crie o mesmo webhook na conta real e faça redeploy da API.
+
+A chave nunca vai para o git nem para o chat. Para testar na sua máquina, coloque as três variáveis no `backend/.env`.
 
 ## 6. Limitações neste primeiro momento (e como resolver depois)
 | O quê | Por quê | Saída |

@@ -8,6 +8,7 @@ import { AreaGuard } from './guard';
 import { ToastProvider } from './admin';
 import { UserMenu } from './user-menu';
 import { Loading, cx } from './ui';
+import { useSession } from '@/lib/session';
 
 export function Logo() {
   return (
@@ -62,9 +63,12 @@ export function PanelShell({ area, title, nav, children }: { area: Area; title: 
 /** Área de estudo (colaborador e aluno): visual do protótipo, abas Início e Cursos. */
 export function StudyShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const { context } = useSession();
   const nav: NavItem[] = [
     { href: '/estudar', label: 'Início', icon: '🏠', exact: true },
     { href: '/estudar/planetas', label: 'Cursos', icon: '🪐' },
+    // aluno individual (B2C) assina pelo Asaas; colaborador tem o acesso da empresa
+    ...(context?.mode === 'B2C' ? [{ href: '/estudar/premium', label: 'Premium', icon: '👑' }] : []),
   ];
   return (
     <AreaGuard area="estudar">

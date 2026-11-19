@@ -74,7 +74,7 @@ export class BillingService {
     return this.prisma.subscription.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: { plan: { select: { name: true, interval: true, priceCents: true, currency: true } } },
+      include: { plan: { select: { name: true, interval: true, priceCents: true, currency: true, tier: { select: { code: true, name: true } } } } },
     });
   }
 
@@ -138,7 +138,8 @@ export class BillingService {
     if (sub.provider === 'ASAAS') await this.asaas.cancelRemote(sub);
     const updated = await this.prisma.subscription.update({
       where: { id: subscriptionId },
-      data: immediately ? { status: 'CANCELED', canceledAt: new Date(), currentPeriodEnd: new Date() } : { cancelAtPeriodEnd: true, canceledAt: new Date() },
+      // cobrança ainda não paga (PENDING) some na hora; assinatura paga vale até o fim do período
+      data: immediately || sub.status === 'PENDING' ? { status: 'CANCELED', canceledAt: new Date(), currentPeriodEnd: new Date() } : { cancelAtPeriodEnd: true, canceledAt: new Date() },
     });
     await this.audit.log(me, 'subscription.cancel', 'subscription', subscriptionId, { immediately }, sub.tenantId ?? undefined);
     return updated;

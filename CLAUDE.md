@@ -75,6 +75,7 @@ npm run harness:check        # valida agentes, skills, hooks e knowledge
   - planos do aluno por galáxia: Básico (só gratuitos), Premium (Para a vida + Para o trabalho) e Premium Plus (todas); o MASTER escolhe as galáxias no menu Planos (ADR 0014).
   - cursos de som (violão, canto): aula de som, treino de ouvido e prática no microfone, sem vídeo (ADR 0015).
   - narração em voz alta na Escola (voz do aparelho pt-BR; 1º ano automático, demais pelo botão; desligável nos Ajustes) (ADR 0017).
+  - Premium do aluno pelo Asaas na web e no PWA (Pix, cartão, boleto; mensal e anual); app das lojas pela RevenueCat (ADR 0019).
   - PWA do app (export web do Expo, projeto 3 da Vercel) até a publicação nas lojas (ADR 0018).
   - primeiro deploy: banco no Supabase, API e web na Vercel (Hobby por enquanto). Guia em `deploy/vercel-supabase.md` (ADR 0016). Toda tabela nova liga o RLS na migração que a cria.
   - Detalhes em `knowledge/produto/decisoes-do-cliente.md`.

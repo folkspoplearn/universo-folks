@@ -127,6 +127,12 @@ function createApiClient(o) {
         billing: {
             /** Básico, Premium, Premium Plus: galáxias e preços (público) */
             tiers: () => get('/billing/tiers'),
+            mySubscriptions: () => get('/billing/me/subscriptions'),
+            /** web/PWA: assinatura pelo Asaas (Pix, cartão ou boleto na fatura). No app das lojas é RevenueCat. */
+            checkout: (b) => post('/billing/checkout', b),
+            /** "Já paguei": confere a cobrança no Asaas e libera o Premium se estiver paga */
+            refresh: (subscriptionId) => post(`/billing/subscriptions/${subscriptionId}/refresh`),
+            cancel: (subscriptionId) => post(`/billing/subscriptions/${subscriptionId}/cancel`),
         },
         catalog: {
             home: () => get('/catalog/home'),

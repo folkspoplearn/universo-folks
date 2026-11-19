@@ -22,7 +22,32 @@ export function addInterval(start: Date, interval: BillingInterval): Date {
 }
 
 const today = () => dayInTz(new Date(), 'America/Sao_Paulo').toISOString().slice(0, 10);
+/** Meia-noite de Brasília (UTC-3) do dia: o período vale até o início do dia do vencimento, no horário do aluno. */
+export const brMidnight = (day: string) => new Date(`${day.slice(0, 10)}T03:00:00.000Z`);
 const onlyDigits = (v: string) => v.replace(/\D/g, '');
+
+/** CPF (11) ou CNPJ (14) com dígitos verificadores válidos: evita mandar documento errado ao Asaas. */
+export function validDocument(raw: string): boolean {
+  const d = onlyDigits(raw);
+  if (/^(\d)\1+$/.test(d)) return false;
+  const dv = (base: string, weights: number[]) => {
+    const sum = base.split('').reduce((a, n, i) => a + Number(n) * weights[i], 0);
+    const r = sum % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  if (d.length === 11) {
+    const w = (n: number) => Array.from({ length: n }, (_, i) => n + 1 - i);
+    return dv(d.slice(0, 9), w(9)) === Number(d[9]) && dv(d.slice(0, 10), w(10)) === Number(d[10]);
+  }
+  if (d.length === 14) {
+    const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const w2 = [6, ...w1];
+    return dv(d.slice(0, 12), w1) === Number(d[12]) && dv(d.slice(0, 13), w2) === Number(d[13]);
+  }
+  return false;
+}
+
+const STORE = new Set(['APPLE', 'GOOGLE', 'REVENUECAT']);
 
 /**
  * Gateway Asaas (Pix, boleto e cartão).
@@ -57,7 +82,7 @@ export class AsaasService {
   private async customerForUser(userId: string, cpfCnpj: string) {
     const u = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const doc = onlyDigits(cpfCnpj);
-    if (![11, 14].includes(doc.length)) throw new BadRequestException('Informe um CPF ou CNPJ válido');
+    if (!validDocument(doc)) throw new BadRequestException('CPF ou CNPJ inválido. Confira os números.');
     if (u.asaasCustomerId) {
       await this.request(`/customers/${u.asaasCustomerId}`, 'POST', { cpfCnpj: doc });
       return u.asaasCustomerId;
@@ -84,16 +109,30 @@ export class AsaasService {
   }
 
   // ------------------------------------------------------- B2C (web)
-  /** Assinatura Premium na web. Devolve a fatura do Asaas, onde a pessoa paga com Pix, boleto ou cartão. */
+  /**
+   * Assinatura Premium na web/PWA. Devolve a fatura do Asaas, onde a pessoa paga com Pix, boleto ou cartão.
+   * Troca de plano: subir de plano (Premium -> Premium Plus) ou trocar o ciclo (mensal <-> anual) gera a
+   * nova cobrança; a assinatura antiga só é cancelada quando a nova for paga (ninguém fica sem acesso).
+   * Descer de plano: cancele o atual (vale até o fim do período) e assine o outro depois.
+   */
   async createB2CCheckout(user: AuthUser, planId: string, cpfCnpj: string, billingType: AsaasBillingType = 'UNDEFINED') {
     this.assertEnabled();
-    const plan = await this.prisma.plan.findFirst({ where: { id: planId, audience: 'B2C', isActive: true } });
+    if (user.mode !== 'B2C') throw new BadRequestException('O Premium é para o aluno individual. Troque para o perfil individual para assinar.');
+    const plan = await this.prisma.plan.findFirst({ where: { id: planId, audience: 'B2C', isActive: true }, include: { tier: true } });
     if (!plan) throw new BadRequestException('Plano não encontrado ou inativo');
     if (plan.priceCents <= 0) throw new BadRequestException('Plano sem preço definido');
     const active = await this.prisma.subscription.findFirst({
       where: { userId: user.id, status: { in: ['ACTIVE', 'TRIALING'] }, currentPeriodEnd: { gt: new Date() }, plan: { audience: 'B2C' } },
+      include: { plan: { include: { tier: true } } },
+      orderBy: { currentPeriodEnd: 'desc' },
     });
-    if (active) throw new BadRequestException('Você já tem uma assinatura Premium ativa');
+    if (active) {
+      if (STORE.has(active.provider)) throw new BadRequestException('Sua assinatura é pela loja do celular. Para trocar de plano, use a Apple/Google.');
+      if (active.planId === plan.id) throw new BadRequestException('Este já é o seu plano');
+      const cur = active.plan.tier?.sortOrder ?? 0;
+      const next = plan.tier?.sortOrder ?? 0;
+      if (next < cur) throw new BadRequestException('Para mudar para um plano menor, cancele o atual (ele vale até o fim do período) e assine o outro depois.');
+    }
 
     // checkout anterior não pago é substituído
     const pending = await this.prisma.subscription.findMany({ where: { userId: user.id, provider: 'ASAAS', status: 'PENDING' } });
@@ -107,7 +146,29 @@ export class AsaasService {
     const { remoteId, payment } = await this.createRemote(customer, plan, plan.priceCents, billingType, today(), `sub:${local.id}`, `Universo Folks - ${plan.name}`);
     await this.prisma.subscription.update({ where: { id: local.id }, data: { providerSubscriptionId: remoteId } });
     if (payment) await this.upsertPayment(payment, local);
-    return { subscriptionId: local.id, checkoutUrl: payment?.invoiceUrl ?? null, paymentId: payment?.id ?? null, dueDate: payment?.dueDate ?? today() };
+    await this.audit.log(user, 'asaas.b2c_checkout', 'subscription', local.id, { planId: plan.id, replaces: active?.id ?? null });
+    return { subscriptionId: local.id, checkoutUrl: payment?.invoiceUrl ?? null, paymentId: payment?.id ?? null, dueDate: payment?.dueDate ?? today(), replaces: active ? { subscriptionId: active.id, plan: active.plan.name } : null };
+  }
+
+  /**
+   * "Já paguei": confere no Asaas as cobranças da assinatura do aluno e aplica o resultado (mesma regra do
+   * webhook). Serve quando o webhook atrasa ou ainda não está configurado.
+   */
+  async refreshForUser(user: AuthUser, subscriptionId: string) {
+    this.assertEnabled();
+    const sub = await this.prisma.subscription.findFirst({ where: { id: subscriptionId, userId: user.id, provider: 'ASAAS' } });
+    if (!sub) throw new BadRequestException('Assinatura não encontrada');
+    if (sub.providerSubscriptionId) {
+      const payments: any[] = sub.providerSubscriptionId.startsWith('pay:')
+        ? [await this.request(`/payments/${sub.providerSubscriptionId.slice(4)}`, 'GET')]
+        : ((await this.request(`/subscriptions/${sub.providerSubscriptionId}/payments`, 'GET'))?.data ?? []);
+      for (const p of payments) {
+        const fresh = await this.prisma.subscription.findUniqueOrThrow({ where: { id: sub.id } });
+        await this.applyPayment(PAID.has(p.status) ? 'PAYMENT_RECEIVED' : p.status === 'OVERDUE' ? 'PAYMENT_OVERDUE' : 'PAYMENT_UPDATED', p, fresh);
+      }
+    }
+    const now = await this.prisma.subscription.findUniqueOrThrow({ where: { id: sub.id }, include: { plan: { select: { name: true, interval: true } } } });
+    return { subscriptionId: now.id, status: now.status, plan: now.plan, currentPeriodEnd: now.currentPeriodEnd, active: now.status === 'ACTIVE' && now.currentPeriodEnd > new Date() };
   }
 
   // ------------------------------------------------- contratos B2B/B2G
@@ -124,7 +185,7 @@ export class AsaasService {
     if (value <= 0) throw new BadRequestException('Informe o valor do contrato (valueCents)');
     const customer = await this.customerForTenant(tenantId);
     const due = dto.nextDueDate ?? today();
-    const start = new Date(`${due}T00:00:00.000Z`);
+    const start = brMidnight(due);
     const local = await this.prisma.subscription.create({
       data: {
         tenantId, planId: plan.id, provider: 'ASAAS', status: 'ACTIVE', seats: dto.seats, amountCents: value,
@@ -208,11 +269,16 @@ export class AsaasService {
       this.log.warn(`Asaas ${event}: cobrança ${p.id} sem assinatura local`);
       return { ignored: 'assinatura desconhecida' };
     }
+    return this.applyPayment(event, p, sub);
+  }
+
+  /** Aplica uma cobrança do Asaas à assinatura local (webhook e "Já paguei"). */
+  private async applyPayment(event: string, p: any, sub: Subscription) {
     const status = await this.upsertPayment(p, sub, event === 'PAYMENT_DELETED' ? 'FAILED' : undefined);
     const plan = await this.prisma.plan.findUniqueOrThrow({ where: { id: sub.planId } });
 
     if (status === 'PAID') {
-      const base = new Date(`${(p.dueDate ?? today()).slice(0, 10)}T00:00:00.000Z`);
+      const base = brMidnight(p.dueDate ?? today());
       const newEnd = addInterval(base, plan.interval);
       await this.prisma.subscription.update({
         where: { id: sub.id },
@@ -222,6 +288,8 @@ export class AsaasService {
           currentPeriodEnd: newEnd > sub.currentPeriodEnd ? newEnd : sub.currentPeriodEnd,
         },
       });
+      // troca de plano: a nova foi paga, então a antiga (Asaas) é encerrada agora
+      if (sub.userId && sub.status === 'PENDING' && plan.audience === 'B2C') await this.replaceOthers(sub);
     } else if (event === 'PAYMENT_OVERDUE') {
       await this.prisma.subscription.update({ where: { id: sub.id }, data: { status: sub.status === 'PENDING' ? 'PENDING' : 'PAST_DUE' } });
       if (sub.tenantId) await this.audit.log(null, 'asaas.tenant_overdue', 'tenant', sub.tenantId, { paymentId: p.id, dueDate: p.dueDate }, sub.tenantId);
@@ -229,6 +297,17 @@ export class AsaasService {
       await this.prisma.subscription.update({ where: { id: sub.id }, data: { status: 'CANCELED', canceledAt: new Date(), currentPeriodEnd: new Date() } });
     }
     return { subscriptionId: sub.id, paymentStatus: status };
+  }
+
+  private async replaceOthers(paid: Subscription) {
+    const others = await this.prisma.subscription.findMany({
+      where: { userId: paid.userId, id: { not: paid.id }, provider: 'ASAAS', status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] }, plan: { audience: 'B2C' } },
+    });
+    for (const o of others) {
+      await this.cancelRemote(o).catch((e) => this.log.warn(`não cancelou ${o.id} no Asaas: ${e?.message ?? e}`));
+      await this.prisma.subscription.update({ where: { id: o.id }, data: { status: 'CANCELED', canceledAt: new Date(), currentPeriodEnd: new Date() } });
+      await this.audit.log(null, 'asaas.b2c_replaced', 'subscription', o.id, { by: paid.id });
+    }
   }
 
   private async findSubscription(p: any) {

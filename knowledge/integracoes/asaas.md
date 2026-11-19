@@ -1,21 +1,51 @@
 # Integração Asaas
 
-> tags: asaas, pagamento, pix, boleto, cartão, assinatura, webhook, b2b, contrato
+> tags: asaas, pagamento, pix, boleto, cartão, assinatura, premium, premium plus, checkout, fatura, cpf, webhook, já paguei, troca de plano, upgrade, b2b, contrato, sandbox
 
 - **Configuração:**
-  - `ASAAS_API_KEY`, enviada no header `access_token`. Também é obrigatório enviar um `User-Agent`.
+  - `ASAAS_API_KEY`: enviada no header `access_token`. Também é obrigatório enviar um `User-Agent`.
   - `ASAAS_API_URL`: sandbox `https://api-sandbox.asaas.com/v3`, produção `https://api.asaas.com/v3`.
   - `ASAAS_WEBHOOK_TOKEN`: chega no header `asaas-access-token`.
-- **Cliente:** `POST /customers` com `cpfCnpj` obrigatório para cobrar. O id fica em `User.asaasCustomerId` ou `Tenant.asaasCustomerId`.
+  - Sem `ASAAS_API_KEY`, o checkout responde 503 ("ainda não configurado").
+- **Onde se paga pelo Asaas:**
+  - Premium do aluno **na web e no PWA** (ADR 0019).
+  - Contratos de empresas (B2B/B2G).
+  - No app das lojas, a compra é in-app pela RevenueCat, exigência da Apple e do Google.
+- **Cliente:** `POST /customers` com `cpfCnpj` obrigatório para cobrar.
+  - O id fica em `User.asaasCustomerId` ou `Tenant.asaasCustomerId`.
+  - O CPF/CNPJ é validado pelos dígitos verificadores antes de ir ao Asaas (`validDocument`).
+  - A plataforma **não guarda** o documento, só o id do cliente no Asaas.
 - **Assinatura:**
-  - `POST /subscriptions {customer, billingType: UNDEFINED|PIX|BOLETO|CREDIT_CARD, value (reais), nextDueDate, cycle: MONTHLY|QUARTERLY|YEARLY, externalReference: "sub:<id local>"}`.
+  - `POST /subscriptions {customer, billingType, value (reais), nextDueDate, cycle: MONTHLY|QUARTERLY|YEARLY, externalReference: "sub:<id local>"}`.
+  - No Premium, `billingType: UNDEFINED`: o aluno escolhe **Pix, cartão ou boleto** na fatura. O cartão renova sozinho; Pix e boleto geram uma fatura nova a cada ciclo.
   - A primeira fatura vem de `GET /subscriptions/{id}/payments` → `invoiceUrl`.
-  - Plano `ONE_TIME` usa `POST /payments`.
+  - O plano `ONE_TIME` usa `POST /payments`.
+- **Checkout B2C** (`POST /billing/checkout {planId, cpfCnpj}`):
+  - Só para o perfil individual (B2C); colaborador é recusado.
+  - Um checkout novo cancela o anterior não pago.
+  - A web/PWA leva o aluno para a fatura **na mesma aba**: abrir janela depois de esperar a API é bloqueado pelo Safari/PWA. O link fica guardado no aparelho para "Abrir a fatura".
+- **Troca de plano:**
+  - Subir (Premium → Premium Plus) ou trocar o ciclo (mensal ↔ anual) gera a nova cobrança. A antiga só é cancelada, no Asaas e na plataforma, **quando a nova é paga** (`replaceOthers`). Não há crédito proporcional do período antigo.
+  - Descer de plano é recusado: o aluno cancela (vale até o fim do período) e assina depois.
+  - Quem assina pela loja troca pela Apple/Google.
+- **"Já paguei"** (`POST /billing/subscriptions/:id/refresh`):
+  - Confere as cobranças no Asaas e aplica a mesma regra do webhook (`applyPayment`).
+  - A tela Premium confere sozinha a cada 15 s enquanto há pagamento pendente. Funciona mesmo sem webhook ou com atraso.
+- **Período:** o fim do período é a **meia-noite de Brasília** do vencimento + o intervalo (`brMidnight`). O acesso Premium vale enquanto `status` ∈ ACTIVE/TRIALING e `currentPeriodEnd` > agora.
 - **Webhook** (`POST /api/billing/webhooks/asaas`):
-  - `PAYMENT_RECEIVED`/`PAYMENT_CONFIRMED` → ACTIVE, e o fim do período passa a `dueDate + intervalo`;
-  - `PAYMENT_OVERDUE` → PAST_DUE;
+  - `PAYMENT_RECEIVED`/`PAYMENT_CONFIRMED` → ACTIVE, e o fim do período passa a vencimento + intervalo;
+  - `PAYMENT_OVERDUE` → PAST_DUE, que perde o acesso até pagar;
   - `PAYMENT_REFUNDED` (B2C) → CANCELED;
   - `SUBSCRIPTION_DELETED`/`INACTIVATED` → cancelamento.
   - Idempotência pelo `id` do evento.
 - **Cancelar:** `DELETE /subscriptions/{id}`.
-- **Status:** conta em análise pelo Asaas. O código foi validado só contra uma API simulada; falta testar no sandbox.
+  - Assinatura paga: vale até o fim do período (`cancelAtPeriodEnd`).
+  - Cobrança ainda não paga: some na hora.
+- **Preços:** os 4 preços B2C (Premium e Premium Plus, mensal e anual) existem desativados e com preço zero (migração `planos_premium_plus`). O MASTER define o valor e ativa no menu Planos.
+- **A chave começa com `$`** (`$aact_hmlg_…` no sandbox, `$aact_prod_…` em produção):
+  - no Docker Compose (`deploy/.env`), escreva entre aspas simples, senão o compose a trata como variável e ela chega vazia;
+  - na Vercel e no `.env` lido pelo Node, não precisa de nada.
+- **Status (2026-11-19):**
+  - validado contra um Asaas simulado (e2e `asaas-premium.mjs`, 29 verificações) e nas telas do PWA e da web;
+  - **validado no sandbox real** (13 verificações): checkout com fatura `sandbox.asaas.com`, cobrança `UNDEFINED` de R$ 19,90, pagamento simulado (`receiveInCash`), liberação pelo "Já paguei", troca para o Premium Plus com a antiga encerrada no Asaas, e cancelamento;
+  - **falta:** o webhook real (precisa da API publicada na Vercel) e a conta de produção.

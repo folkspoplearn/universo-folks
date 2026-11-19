@@ -4,7 +4,8 @@
 #   listar                        -> lista bancos de teste
 #   remover <nome> --confirmar    -> remove SOMENTE bancos universo_folks_test_*
 set -euo pipefail
-PSQL=(docker compose exec -T postgres psql -U folks -d postgres -v ON_ERROR_STOP=1)
+# --env-file /dev/null: o compose NÃO lê o backend/.env (segredos com "$" viravam variáveis e apareciam nos avisos)
+PSQL=(docker compose --env-file /dev/null exec -T postgres psql -U folks -d postgres -v ON_ERROR_STOP=1)
 cmd="${1:-}"
 case "$cmd" in
   criar)

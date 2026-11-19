@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { z } from 'zod';
 import { CurrentUser, Public, Roles } from '../common/decorators';
@@ -94,6 +95,12 @@ export class BillingController {
   @ApiBearerAuth() @Post('billing/checkout')
   checkout(@CurrentUser() u: AuthUser, @Body(new ZodPipe(checkoutSchema)) dto: z.infer<typeof checkoutSchema>) {
     return this.s.webCheckout(u, dto.planId, dto.cpfCnpj, dto.billingType);
+  }
+
+  /** "Já paguei": confere a cobrança no Asaas (quando o webhook atrasa) e libera o Premium se estiver paga. */
+  @ApiBearerAuth() @Throttle({ default: { limit: 20, ttl: 60_000 } }) @Post('billing/subscriptions/:id/refresh') @HttpCode(200)
+  refreshMine(@CurrentUser() u: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.asaas.refreshForUser(u, id);
   }
 
   @ApiBearerAuth() @Post('billing/subscriptions/:id/cancel')

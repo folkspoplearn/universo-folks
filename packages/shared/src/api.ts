@@ -6,7 +6,7 @@ import type {
 import type { AnswerPayload, PublicQuestion } from './questions';
 import type { LessonVideo, VideoProgressResult } from './video';
 import type { Narration } from './narration';
-import type { Entitlements, Hangar, MyCompany, Preferences, Progress, PublicTier } from './account';
+import type { CheckoutResult, Entitlements, Hangar, MyCompany, MySubscription, Preferences, Progress, PublicTier, SubscriptionRefresh } from './account';
 
 type Fetch = typeof fetch;
 
@@ -136,6 +136,12 @@ export function createApiClient(o: ApiClientOptions) {
     billing: {
       /** Básico, Premium, Premium Plus: galáxias e preços (público) */
       tiers: () => get<PublicTier[]>('/billing/tiers'),
+      mySubscriptions: () => get<MySubscription[]>('/billing/me/subscriptions'),
+      /** web/PWA: assinatura pelo Asaas (Pix, cartão ou boleto na fatura). No app das lojas é RevenueCat. */
+      checkout: (b: { planId: string; cpfCnpj: string; billingType?: 'UNDEFINED' | 'PIX' | 'BOLETO' | 'CREDIT_CARD' }) => post<CheckoutResult>('/billing/checkout', b),
+      /** "Já paguei": confere a cobrança no Asaas e libera o Premium se estiver paga */
+      refresh: (subscriptionId: string) => post<SubscriptionRefresh>(`/billing/subscriptions/${subscriptionId}/refresh`),
+      cancel: (subscriptionId: string) => post<MySubscription>(`/billing/subscriptions/${subscriptionId}/cancel`),
     },
     catalog: {
       home: () => get<CatalogHome>('/catalog/home'),

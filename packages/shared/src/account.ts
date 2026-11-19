@@ -114,6 +114,43 @@ export interface PublicTier {
   plans: PublicTierPrice[];
 }
 
+/** Assinatura do aluno (GET /billing/me/subscriptions). */
+export interface MySubscription {
+  id: string;
+  provider: 'ASAAS' | 'APPLE' | 'GOOGLE' | 'REVENUECAT' | 'MANUAL' | string;
+  status: 'PENDING' | 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED' | string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  amountCents: number | null;
+  createdAt: string;
+  plan: { name: string; interval: PublicTierPrice['interval']; priceCents: number; currency: string; tier: { code: string; name: string } | null };
+}
+
+/** Checkout web/PWA pelo Asaas (POST /billing/checkout): a fatura onde a pessoa paga. */
+export interface CheckoutResult {
+  subscriptionId: string;
+  checkoutUrl: string | null;
+  paymentId: string | null;
+  dueDate: string;
+  replaces: { subscriptionId: string; plan: string } | null;
+}
+
+export interface SubscriptionRefresh {
+  subscriptionId: string;
+  status: MySubscription['status'];
+  active: boolean;
+  currentPeriodEnd: string;
+  plan: { name: string; interval: string };
+}
+
+/** CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) enquanto a pessoa digita. */
+export function maskDocument(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 14);
+  if (d.length <= 11) return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
 /** Situação do colaborador na empresa (GET /me/company → status). */
 export const COMPANY_STATUS_LABEL: Record<string, string> = {
   INVITED: 'Convite enviado',
