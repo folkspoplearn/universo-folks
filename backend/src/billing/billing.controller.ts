@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, ParseUUIDPipe, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { z } from 'zod';
 import { CurrentUser, Public, Roles } from '../common/decorators';
@@ -109,7 +109,7 @@ export class BillingController {
   }
 
   /** Premium pelas lojas: webhook da RevenueCat (header Authorization = REVENUECAT_WEBHOOK_AUTH). */
-  @Public() @Post('billing/webhooks/revenuecat') @HttpCode(200)
+  @Public() @SkipThrottle() @Post('billing/webhooks/revenuecat') @HttpCode(200)
   async revenuecatWebhook(@Headers('authorization') auth: string, @Body() body: any) {
     this.revenuecat.assertAuth(auth);
     return this.revenuecat.handle(body);
@@ -121,8 +121,12 @@ export class BillingController {
     return this.admob.handle(req.originalUrl);
   }
 
-  /** Webhook do Asaas (header asaas-access-token = ASAAS_WEBHOOK_TOKEN). */
-  @Public() @Post('billing/webhooks/asaas') @HttpCode(200)
+  /**
+   * Webhook do Asaas (header asaas-access-token = ASAAS_WEBHOOK_TOKEN). O Asaas só conta como entregue o HTTP 200:
+   * qualquer outro código conta como falha e, depois de 15 seguidas, a fila do webhook é interrompida.
+   * Cadastro e conferência: node scripts/asaas-webhook.mjs (sem limite de requisições: o token já autentica).
+   */
+  @Public() @SkipThrottle() @Post('billing/webhooks/asaas') @HttpCode(200)
   async asaasWebhook(@Headers('asaas-access-token') token: string, @Body() body: unknown) {
     this.asaas.assertWebhookToken(token);
     return this.asaas.handleWebhook(body);

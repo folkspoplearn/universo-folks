@@ -2,11 +2,12 @@
 // Rode contra um banco DE TESTE (skill testes-e2e), com a API apontando para o simulador:
 //   bash ../skills/testes-e2e/banco-teste.sh criar asaas
 //   PORT=3011 DATABASE_URL=...universo_folks_test_asaas ASAAS_API_KEY=teste ASAAS_API_URL=http://localhost:4010/v3 \
-//     ASAAS_WEBHOOK_TOKEN=token-e2e node dist/main.js
+//     ASAAS_WEBHOOK_TOKEN=token-e2e-com-pelo-menos-32-caracteres node dist/main.js
 //   API_URL=http://localhost:3011/api node test/e2e/asaas-premium.mjs
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 const API = process.env.API_URL ?? 'http://localhost:3011/api';
-const HOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN ?? 'token-e2e';
+const HOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN ?? 'token-e2e-com-pelo-menos-32-caracteres';
 const RUN = Date.now().toString(36);
 let fails = 0, total = 0;
 const ok = (c, m, x) => { total++; console.log(`${c ? '✔' : '✘'} ${m}${x !== undefined ? ' -> ' + JSON.stringify(x).slice(0, 240) : ''}`); if (!c) fails++; };
@@ -17,7 +18,7 @@ const call = async (method, path, token, body, headers = {}) => {
 };
 
 // ---------------------------------------------------------------- Asaas simulado
-const asaas = { customers: new Map(), subs: new Map(), payments: new Map(), deleted: [], calls: [] };
+const asaas = { webhooks: [], customers: new Map(), subs: new Map(), payments: new Map(), deleted: [], calls: [] };
 let seq = 0;
 // ids únicos por rodada, como os do Asaas (o banco de teste pode ter clientes de rodadas anteriores)
 const nid = (p) => `${p}_${RUN}_${++seq}`;
@@ -29,6 +30,9 @@ const mock = http.createServer((req, res) => {
     const send = (s, j) => { res.writeHead(s, { 'content-type': 'application/json' }); res.end(JSON.stringify(j)); };
     const p = url.pathname.replace(/^\/v3/, '');
     let m;
+    if (req.method === 'GET' && p === '/webhooks') return send(200, { object: 'list', data: asaas.webhooks.map(({ authToken, ...w }) => ({ ...w, hasAuthToken: !!authToken })) });
+    if (req.method === 'POST' && p === '/webhooks') { const w = { id: nid('wh'), penalizedRequestsCount: 0, ...body }; asaas.webhooks.push(w); const { authToken, ...pub } = w; return send(200, { ...pub, hasAuthToken: !!authToken }); }
+    if (req.method === 'PUT' && (m = p.match(/^\/webhooks\/(.+)$/))) { const w = asaas.webhooks.find((x) => x.id === m[1]); if (!w) return send(404, {}); Object.assign(w, body); const { authToken, ...pub } = w; return send(200, { ...pub, hasAuthToken: !!authToken }); }
     if (req.method === 'POST' && p === '/customers') { const c = { id: nid('cus'), ...body }; asaas.customers.set(c.id, c); return send(200, c); }
     if (req.method === 'POST' && (m = p.match(/^\/customers\/(.+)$/))) { Object.assign(asaas.customers.get(m[1]) ?? {}, body); return send(200, asaas.customers.get(m[1])); }
     if (req.method === 'POST' && p === '/subscriptions') { const s = { id: nid('sub'), ...body, status: 'ACTIVE' }; asaas.subs.set(s.id, s); newPayment(s, body.nextDueDate); return send(200, s); }
@@ -131,6 +135,37 @@ try {
   ok(colCo.status === 400 && /aluno individual/.test(colCo.body.message), 'colaborador (perfil da empresa) não assina o Premium', colCo.body.message);
   const outro = await call('POST', `/billing/subscriptions/${co2.body.subscriptionId}/refresh`, col.body.accessToken);
   ok(outro.status === 400, 'ninguém confere a assinatura de outra pessoa', outro.status);
+
+  // ---------------------------------------------------------------- cadastro do webhook (scripts/asaas-webhook.mjs)
+  const script = (args, token = HOOK_TOKEN) => new Promise((resolve) => {
+    const c = spawn(process.execPath, ['scripts/asaas-webhook.mjs', ...args], { env: { ...process.env, ASAAS_API_KEY: 'teste', ASAAS_API_URL: 'http://localhost:4010/v3', ASAAS_WEBHOOK_TOKEN: token } });
+    let out = ''; c.stdout.on('data', (d) => (out += d)); c.stderr.on('data', (d) => (out += d));
+    c.on('close', (code) => resolve({ code, out }));
+  });
+  const apiBase = API.replace(/\/api$/, '');
+  const longToken = HOOK_TOKEN.length >= 32 ? HOOK_TOKEN : null;
+  if (!longToken) ok(true, `(cadastro do webhook pulado: ASAAS_WEBHOOK_TOKEN da API tem menos de 32 caracteres)`);
+  else {
+    const st0 = await script(['status']);
+    ok(st0.code === 1 && /não cadastrado/.test(st0.out), 'status sem webhook cadastrado avisa e sai com erro');
+    const bad = await script(['configurar', '--api', apiBase, '--email', 'financeiro@teste.example'], 'x'.repeat(40));
+    ok(bad.code === 1 && /diferente do da Vercel/.test(bad.out) && asaas.webhooks.length === 0, 'token diferente do da API: recusa e não cadastra nada', bad.out.trim());
+    const cfg = await script(['configurar', '--api', `${apiBase}/api/`, '--email', 'financeiro@teste.example']);
+    const wh = asaas.webhooks[0];
+    ok(cfg.code === 0 && wh?.url === `${apiBase}/api/billing/webhooks/asaas` && wh.authToken === HOOK_TOKEN && wh.sendType === 'SEQUENTIALLY' && wh.apiVersion === 3, 'configurar cadastra o webhook com a URL da API e o mesmo token', cfg.out.trim().split('\n').slice(0, 3));
+    ok(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED', 'PAYMENT_OVERDUE', 'PAYMENT_REFUNDED', 'SUBSCRIPTION_DELETED'].every((e) => wh?.events.includes(e)), 'webhook com os eventos de pagamento e assinatura que a API trata', wh?.events);
+    ok(!cfg.out.includes(HOOK_TOKEN), 'o script não imprime o token');
+    const again = await script(['configurar', '--api', apiBase]);
+    ok(again.code === 0 && /atualizado/.test(again.out) && asaas.webhooks.length === 1, 'rodar de novo atualiza o mesmo webhook (não duplica)');
+    wh.interrupted = true;
+    const st1 = await script(['status']);
+    ok(st1.code === 1 && /INTERROMPIDA/.test(st1.out), 'status mostra fila interrompida');
+    const re = await script(['reativar']);
+    ok(re.code === 0 && wh.interrupted === false && (await script(['status'])).code === 0, 'reativar religa a fila e o status volta a ficar ok');
+  }
+  const dupId = `evt_${RUN}_dup&123`;
+  const [d1, d2] = await Promise.all([1, 2].map(() => call('POST', '/billing/webhooks/asaas', null, { id: dupId, event: 'PAYMENT_UPDATED', payment: { id: 'pay_desconhecido', status: 'PENDING' } }, { 'asaas-access-token': HOOK_TOKEN })));
+  ok(d1.status === 200 && d2.status === 200, 'a mesma notificação chegando duas vezes ao mesmo tempo responde 200 nas duas (o Asaas não penaliza)', [d1.status, d2.status]);
 } finally {
   mock.close();
 }

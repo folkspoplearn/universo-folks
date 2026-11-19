@@ -93,16 +93,22 @@ O app abre em tela cheia e com o ícone do planeta. A tela inicial abre mesmo se
 2. Em **Integrações → Chave de API**, gere a chave. Na Vercel (projeto da API), configure:
    - `ASAAS_API_KEY` = a chave (no sandbox começa com `$aact_hmlg_`);
    - `ASAAS_API_URL` = `https://api-sandbox.asaas.com/v3`;
-   - `ASAAS_WEBHOOK_TOKEN` = `openssl rand -hex 24`.
-3. Em **Integrações → Webhooks**, crie um webhook:
-   - **URL:** `https://<api>/api/billing/webhooks/asaas`
-   - **Token de autenticação:** o mesmo `ASAAS_WEBHOOK_TOKEN`
-   - **Eventos de cobrança:** `PAYMENT_CREATED`, `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_REFUNDED`, `PAYMENT_DELETED`
-   - **Eventos de assinatura:** `SUBSCRIPTION_DELETED`, `SUBSCRIPTION_INACTIVATED`
-   - Versão da API: v3. Envio sequencial, ativo.
+   - `ASAAS_WEBHOOK_TOKEN` = `openssl rand -hex 32`. O Asaas exige de 32 a 255 caracteres, sem espaço.
+   Coloque o mesmo token no `backend/.env` local, porque o script do passo 3 o lê de lá. Depois faça redeploy da API.
+3. **Webhook** (o Asaas avisa a API quando a cobrança é paga, vence, é estornada ou a assinatura é encerrada). Com a API já publicada, rode na sua máquina:
+   ```bash
+   cd backend
+   node scripts/asaas-webhook.mjs configurar --api https://<api>.vercel.app --email <e-mail do financeiro>
+   ```
+   - Antes de cadastrar, o script confere que a API responde e usa o mesmo token. Se o token for diferente do da Vercel, ele para sem cadastrar nada.
+   - Cadastra o webhook "Universo Folks - API" com a URL `https://<api>/api/billing/webhooks/asaas`, envio sequencial, API v3 e os eventos que a API trata: `PAYMENT_CREATED`, `PAYMENT_UPDATED`, `PAYMENT_CONFIRMED`, `PAYMENT_RECEIVED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_RESTORED`, `PAYMENT_REFUNDED`, `SUBSCRIPTION_INACTIVATED` e `SUBSCRIPTION_DELETED`.
+   - Rodar de novo atualiza o mesmo webhook, sem duplicar. Use isso ao trocar o endereço da API ou o token.
+   - `node scripts/asaas-webhook.mjs status` mostra se o webhook está ativo, se a fila está rodando e quantas entregas falharam.
+   - O Asaas só conta como entregue a resposta HTTP 200. Depois de 15 falhas seguidas, ele **interrompe a fila** e avisa por e-mail. Corrija a causa (API fora do ar, token diferente) e rode `node scripts/asaas-webhook.mjs reativar`. Os eventos pendentes são reenviados, desde que tenham menos de 14 dias.
+   - Sem o script: em **Integrações → Webhooks** no painel do Asaas, com os mesmos dados.
 4. No painel da plataforma, como MASTER, abra o **menu Planos**, defina o preço do Premium e do Premium Plus (mensal e anual) e **ative**. Preço zero aparece como "Preço em breve".
 5. **Teste:** entre no PWA com uma conta de aluno, assine e pague a fatura do sandbox. No sandbox, o Pix tem a opção de simular o pagamento. O plano deve ser liberado em segundos (pelo webhook ou pelo "Já paguei").
-6. **Produção:** troque a `ASAAS_API_KEY` pela chave da conta real e a `ASAAS_API_URL` por `https://api.asaas.com/v3`. Crie o mesmo webhook na conta real e faça redeploy da API.
+6. **Produção:** troque a `ASAAS_API_KEY` pela chave da conta real e a `ASAAS_API_URL` por `https://api.asaas.com/v3`. Faça redeploy da API e rode o `configurar` de novo com a chave de produção no `backend/.env`: o webhook é por conta, e a conta real é outra.
 
 A chave nunca vai para o git nem para o chat. Para testar na sua máquina, coloque as três variáveis no `backend/.env`.
 

@@ -37,7 +37,18 @@
   - `PAYMENT_OVERDUE` → PAST_DUE, que perde o acesso até pagar;
   - `PAYMENT_REFUNDED` (B2C) → CANCELED;
   - `SUBSCRIPTION_DELETED`/`INACTIVATED` → cancelamento.
-  - Idempotência pelo `id` do evento.
+  - Idempotência pelo `id` do evento. Duas entregas simultâneas do mesmo evento respondem 200 nas duas (P2002 = duplicada).
+  - Sem limite de requisições (`@SkipThrottle`), porque o token já autentica.
+  - **Cadastro:** `node scripts/asaas-webhook.mjs configurar --api https://<api> --email <e-mail>`, com `status` e `reativar`.
+    - Antes de cadastrar, confere que a API publicada responde e usa o mesmo token.
+    - Cria ou atualiza o webhook "Universo Folks - API" (envio sequencial, v3, 10 eventos `PAYMENT_*`/`SUBSCRIPTION_*`). Não duplica.
+  - Regras do Asaas:
+    - só **HTTP 200** conta como entregue;
+    - 15 falhas seguidas **interrompem a fila**, que volta com `PUT /webhooks/{id} {interrupted:false}`;
+    - eventos guardados por 14 dias;
+    - token de 32 a 255 caracteres;
+    - até 10 webhooks por conta;
+    - IPs de produção: 52.67.12.206, 18.230.8.159, 54.94.136.112, 54.94.183.101.
 - **Cancelar:** `DELETE /subscriptions/{id}`.
   - Assinatura paga: vale até o fim do período (`cancelAtPeriodEnd`).
   - Cobrança ainda não paga: some na hora.
@@ -48,4 +59,5 @@
 - **Status (2026-11-19):**
   - validado contra um Asaas simulado (e2e `asaas-premium.mjs`, 29 verificações) e nas telas do PWA e da web;
   - **validado no sandbox real** (13 verificações): checkout com fatura `sandbox.asaas.com`, cobrança `UNDEFINED` de R$ 19,90, pagamento simulado (`receiveInCash`), liberação pelo "Já paguei", troca para o Premium Plus com a antiga encerrada no Asaas, e cancelamento;
-  - **falta:** o webhook real (precisa da API publicada na Vercel) e a conta de produção.
+  - script de cadastro do webhook validado contra o simulado (e2e, 38 verificações);
+  - **falta:** rodar o `configurar` com a API publicada na Vercel (sandbox e depois produção).

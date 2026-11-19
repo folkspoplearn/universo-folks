@@ -58,7 +58,7 @@ const STORE = new Set(['APPLE', 'GOOGLE', 'REVENUECAT']);
  *   ASAAS_API_KEY        chave da conta (Integrações > Chave de API)
  *   ASAAS_API_URL        https://api-sandbox.asaas.com/v3 (sandbox) | https://api.asaas.com/v3 (produção)
  *   ASAAS_WEBHOOK_TOKEN  token de autenticação do webhook (header asaas-access-token)
- * Webhook no painel do Asaas: POST {APP_URL}/api/billing/webhooks/asaas (eventos de cobrança e assinatura).
+ * Webhook: POST {APP_URL}/api/billing/webhooks/asaas, cadastrado com `node scripts/asaas-webhook.mjs configurar`.
  */
 @Injectable()
 export class AsaasService {
@@ -239,7 +239,16 @@ export class AsaasService {
     if (!event) return { ok: true, ignored: 'sem evento' };
     const exists = await this.prisma.webhookEvent.findUnique({ where: { provider_externalId: { provider: 'ASAAS', externalId } } });
     if (exists?.processedAt) return { ok: true, duplicate: true };
-    const evt = exists ?? (await this.prisma.webhookEvent.create({ data: { provider: 'ASAAS', externalId, type: event, payload: body as Prisma.InputJsonValue } }));
+    let evt = exists;
+    if (!evt) {
+      try {
+        evt = await this.prisma.webhookEvent.create({ data: { provider: 'ASAAS', externalId, type: event, payload: body as Prisma.InputJsonValue } });
+      } catch (e) {
+        // o Asaas entrega "pelo menos uma vez": a mesma notificação pode chegar duas vezes ao mesmo tempo
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return { ok: true, duplicate: true };
+        throw e;
+      }
+    }
     try {
       const r = await this.process(event, body);
       await this.prisma.webhookEvent.update({ where: { id: evt.id }, data: { processedAt: new Date(), error: null } });

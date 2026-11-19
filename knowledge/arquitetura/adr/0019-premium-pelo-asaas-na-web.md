@@ -38,6 +38,6 @@
 - Boleto leva até 3 dias úteis para liberar.
 
 ## Pendências
-- ~~Testar no sandbox real~~: feito em 2026-11-19 (13/13). Falta o webhook apontando para a API publicada na Vercel.
+- ~~Testar no sandbox real~~: feito em 2026-11-19 (13/13). Falta cadastrar o webhook com a API publicada na Vercel: `node scripts/asaas-webhook.mjs configurar` (deploy/vercel-supabase.md, seção 5b).
 - Definir os preços reais no menu Planos e ativar.
 - Passar para a chave de produção (`ASAAS_API_URL` de produção) na Vercel.
