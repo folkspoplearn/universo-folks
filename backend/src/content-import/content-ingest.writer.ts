@@ -61,7 +61,7 @@ export class ContentIngestWriter {
         const row =
           planRow.action === 'CREATE'
             ? await tx.planet.create({ data: { ...meta, slug: planet.slug, status: planet.status ?? defaultStatus } })
-            : await tx.planet.update({ where: { slug: planet.slug }, data: { ...meta, ...(planet.status ? { status: planet.status } : opts.publish ? { status: 'PUBLISHED' } : {}) } });
+            : await tx.planet.update({ where: { slug: planRow.targetSlug ?? planet.slug }, data: { ...meta, ...(planet.status ? { status: planet.status } : opts.publish ? { status: 'PUBLISHED' } : {}) } });
         result.planetId = row.id;
 
         for (const [ci, course] of planet.courses.entries()) {

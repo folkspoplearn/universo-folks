@@ -69,5 +69,29 @@ const rename = await call('PATCH', `/master/content/planets/${planet.id}`, M, { 
 const t2 = await tree();
 ok(rename.body.publishedCourses === 0 && t2.courses.find((c) => c.title === 'Curso B').status === 'DRAFT', 'renomear o planeta não publica curso em rascunho');
 
+// ---- importação com slug diferente, mas o mesmo nome do planeta "Em breve" do catálogo (seed: "Gestão de Tempo", slug "tempo")
+const before = (await call('GET', '/master/content/planets', M)).body;
+const placeholder = before.find((p) => p.slug === 'tempo');
+if (!placeholder) ok(true, '(seed sem o planeta "tempo": caso pulado)');
+else {
+  const tempo = { schemaVersion: 'folks.content/v1', planets: [{ key: 'gestao-de-tempo', slug: 'gestao-de-tempo', name: 'Gestão de Tempo', category: 'para-o-trabalho', accessTier: 'PREMIUM', courses: [
+    { key: `gestao-de-tempo.fundamentos.${RUN}`, slug: `fundamentos-da-gestao-de-tempo-${RUN}`, title: 'Fundamentos da Gestão de Tempo', hasCertificate: false, units: [{ title: 'U1', lessons: [aula('Aula T1')] }] },
+  ] }] };
+  const up2 = await call('POST', '/master/content/imports', M, { content: JSON.stringify(tempo), filename: 'tempo.json', label: 'e2e mesmo nome' });
+  const plan2 = (await call('POST', `/master/content/imports/${up2.body.id}/plan`, M, {})).body;
+  const prow = plan2.plan?.planets?.[0] ?? plan2.planets?.[0];
+  ok(prow?.action === 'UPDATE' && prow?.targetSlug === 'tempo', 'prévia: preenche o planeta "Gestão de Tempo" que já existe (não cria outro)', prow && { action: prow.action, targetSlug: prow.targetSlug, reason: prow.reason });
+  await call('POST', `/master/content/imports/${up2.body.id}/apply`, M, {});
+  const after = (await call('GET', '/master/content/planets', M)).body;
+  ok(after.filter((p) => p.name === 'Gestão de Tempo').length === 1 && !after.some((p) => p.slug === 'gestao-de-tempo'), 'continua existindo um só planeta "Gestão de Tempo"', after.filter((p) => p.name === 'Gestão de Tempo').map((p) => p.slug));
+  const tt = (await call('GET', `/master/content/planets/tempo/tree`, M)).body;
+  const fund = tt.courses.find((c) => c.title === 'Fundamentos da Gestão de Tempo');
+  ok(fund?.units.length === 1 && fund.status === 'DRAFT', 'o curso "Em breve" de mesmo nome recebeu a trilha (rascunho)', fund && { status: fund.status, units: fund.units.length });
+  const pub2 = await call('PATCH', `/master/content/planets/${placeholder.id}`, M, { status: 'PUBLISHED' });
+  const c2 = (await call('GET', '/catalog/planets', T)).body;
+  const card2 = (c2.items ?? c2).find((p) => p.slug === 'tempo');
+  ok(pub2.body.publishedCourses >= 1 && card2 && !card2.comingSoon, 'publicado, o aluno vê "Gestão de Tempo" com o curso (não mais "Em breve")', card2 && { comingSoon: card2.comingSoon, courseCount: card2.courseCount });
+}
+
 console.log(`\n${total - fails}/${total} verificações — ${fails ? fails + ' FALHA(S)' : 'TODAS PASSARAM'}`);
 process.exit(fails ? 1 : 0);

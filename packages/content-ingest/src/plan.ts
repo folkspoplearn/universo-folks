@@ -7,6 +7,10 @@ export interface Snapshot {
   planets: Array<{
     id: string;
     slug: string;
+    /** nome e categoria: casam um planeta de mesmo nome com slug diferente (ex.: "Em breve" do catálogo) */
+    name?: string;
+    shortName?: string | null;
+    category?: string;
     status: string;
     contentHash: string | null;
     courses: Array<{ id: string; code: string | null; slug: string; title?: string; contentHash: string | null; hasProgress: boolean; status: string }>;
@@ -33,6 +37,8 @@ export interface Plan {
     name: string;
     action: PlanetAction;
     reason?: string;
+    /** slug do planeta existente que será atualizado, quando difere do slug da importação (casou pelo nome) */
+    targetSlug?: string;
     planetHash: string;
     courses: Array<{ key: string; slug: string; title: string; action: CourseAction; reason?: string; contentHash: string }>;
   }>;
@@ -50,14 +56,25 @@ export function planImport(bundle: Bundle, snap: Snapshot, strategy: Strategy = 
   const count = (k: string) => (summary[k] = (summary[k] ?? 0) + 1);
   const planets = bundle.planets.map((p) => {
     const pHash = planetHash(p);
-    const existing = snap.planets.find((x) => x.slug === p.slug);
-    const base = { key: p.key, slug: p.slug, name: p.name, planetHash: pHash };
+    // casa por slug; senão, pelo nome na mesma categoria (ex.: o planeta "Em breve" do catálogo "Gestão de Tempo",
+    // slug "tempo", recebendo a trilha importada com slug "gestao-de-tempo"). Sem isso nascia um planeta duplicado,
+    // em rascunho, e o aluno continuava vendo o "Em breve".
+    const bySlug = snap.planets.find((x) => x.slug === p.slug);
+    const sameName = (x: Snapshot['planets'][number]) =>
+      x.status !== 'ARCHIVED' && x.category === p.category && [x.name, x.shortName].some((n) => !!n && slugify(n) === slugify(p.name));
+    const byName = bySlug ? [] : snap.planets.filter(sameName);
+    const existing = bySlug ?? (byName.length === 1 ? byName[0] : undefined);
+    const base = { key: p.key, slug: p.slug, name: p.name, planetHash: pHash, ...(existing && existing.slug !== p.slug ? { targetSlug: existing.slug } : {}) };
     const courseRows = (action: CourseAction, reason?: string) =>
       p.courses.map((c) => ({ key: c.key, slug: c.slug, title: c.title, action, reason, contentHash: courseHash(c) }));
 
     if (!snap.categories.includes(p.category)) {
       count('planet.BLOCKED');
       return { ...base, action: 'BLOCKED' as const, reason: `Categoria "${p.category}" não existe. Crie a categoria ou corrija o conteúdo.`, courses: courseRows('SKIP', 'planeta bloqueado') };
+    }
+    if (!existing && byName.length > 1) {
+      count('planet.BLOCKED');
+      return { ...base, action: 'BLOCKED' as const, reason: `Já existem ${byName.length} planetas "${p.name}" nesta categoria (${byName.map((x) => x.slug).join(', ')}): use o slug de um deles na importação.`, courses: courseRows('SKIP', 'planeta bloqueado') };
     }
     if (!existing) {
       count('planet.CREATE');
@@ -102,7 +119,7 @@ export function planImport(bundle: Bundle, snap: Snapshot, strategy: Strategy = 
     const anyCourseChange = rows.some((r) => r.action === 'CREATE' || r.action === 'REPLACE');
     const action: PlanetAction = metaChanged || anyCourseChange ? 'UPDATE' : 'UNCHANGED';
     count(`planet.${action}`);
-    return { ...base, action, courses: rows };
+    return { ...base, action, ...(base.targetSlug ? { reason: `Preenche o planeta existente "${p.name}" (mesmo nome, slug "${base.targetSlug}")` } : {}), courses: rows };
   });
   const hasChanges = planets.some((p) => p.action === 'CREATE' || p.action === 'UPDATE');
   return { strategy, planets, summary, hasChanges };

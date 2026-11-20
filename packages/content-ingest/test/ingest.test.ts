@@ -202,3 +202,30 @@ test('planejador: curso "Em breve" do catálogo com o mesmo nome é preenchido, 
   assert.equal(row.action, 'REPLACE');
   assert.match(row.reason ?? '', /Preenche o curso existente/);
 });
+
+test('planeta de mesmo nome e categoria com slug diferente é preenchido, não duplicado (ex.: "Em breve" do catálogo)', () => {
+  const r = ingest({ content: JSON.stringify({ schemaVersion: 'folks.content/v1', planets: [{ key: 'gestao-de-tempo', slug: 'gestao-de-tempo', name: 'Gestão de Tempo', category: 'para-o-trabalho', courses: [
+    { key: 'gestao-de-tempo.fundamentos', slug: 'fundamentos-da-gestao-de-tempo', title: 'Fundamentos da Gestão de Tempo', units: [{ title: 'U1', lessons: [{ type: 'LESSON', title: 'Aula', slides: [{ heading: 'Oi', text: 'Olá' }] }] }] },
+  ] }] }) });
+  assert.ok(r.valid, JSON.stringify(r.issues));
+  const placeholder = { id: 'p1', slug: 'tempo', name: 'Gestão de Tempo', shortName: 'Gestão de tempo', category: 'para-o-trabalho', status: 'PUBLISHED', contentHash: null,
+    courses: [{ id: 'c1', code: 'tempo-0', slug: 'tempo-0', title: 'Fundamentos da Gestão de Tempo', contentHash: null, hasProgress: false, status: 'COMING_SOON' }] };
+  const plan = planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [placeholder] });
+  assert.equal(plan.planets[0].action, 'UPDATE');
+  assert.equal(plan.planets[0].targetSlug, 'tempo');
+  assert.match(plan.planets[0].reason ?? '', /Preenche o planeta existente/);
+  assert.equal(plan.planets[0].courses[0].action, 'REPLACE'); // preenche o curso "Em breve" de mesmo nome
+
+  // outra categoria ou planeta arquivado: não casa, cria
+  assert.equal(planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [{ ...placeholder, category: 'para-a-vida' }] }).planets[0].action, 'CREATE');
+  assert.equal(planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [{ ...placeholder, status: 'ARCHIVED' }] }).planets[0].action, 'CREATE');
+  // dois planetas com o mesmo nome: ambíguo, não escolhe nem cria um terceiro (bloqueia pedindo o slug)
+  const amb = planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [placeholder, { ...placeholder, id: 'p2', slug: 'tempo-2' }] }).planets[0];
+  assert.equal(amb.action, 'BLOCKED');
+  assert.match(amb.reason ?? '', /tempo, tempo-2/);
+  // o mesmo slug continua tendo prioridade
+  const own = { ...placeholder, id: 'p3', slug: 'gestao-de-tempo', courses: [] };
+  const p2 = planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [placeholder, own] }).planets[0];
+  assert.equal(p2.targetSlug, undefined);
+  assert.equal(p2.action, 'UPDATE');
+});

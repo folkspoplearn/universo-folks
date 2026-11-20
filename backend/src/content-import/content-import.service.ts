@@ -12,6 +12,7 @@ import {
   checkAgainstCatalog,
   ingest,
   planImport,
+  slugify,
   splitValidPlanets,
 } from '@folks/content-ingest';
 import { PrismaService } from '../prisma/prisma.service';
@@ -257,18 +258,22 @@ export class ContentImportService {
     const keys = bundle.planets.flatMap((p) => p.courses.map((c) => c.key));
     const [categories, planets, elsewhere] = await Promise.all([
       this.prisma.studyCategory.findMany({ select: { slug: true } }),
+      // pelo slug ou pelo nome (o planejador casa planeta de mesmo nome e categoria com slug diferente)
       this.prisma.planet.findMany({
-        where: { slug: { in: slugs } },
+        where: { OR: [{ slug: { in: slugs } }, { status: { not: 'ARCHIVED' }, category: { slug: { in: bundle.planets.map((p) => p.category) } } }] },
         select: {
-          id: true, slug: true, status: true, contentHash: true,
+          id: true, slug: true, name: true, shortName: true, status: true, contentHash: true, category: { select: { slug: true } },
           courses: { select: { id: true, code: true, slug: true, title: true, contentHash: true, status: true, _count: { select: { enrollments: true } } } },
         },
       }),
       this.prisma.course.findMany({ where: { code: { in: keys } }, select: { code: true, planet: { select: { slug: true, name: true } } } }),
     ]);
     const courseCodesElsewhere: Record<string, string> = {};
+    const norm = (v?: string | null) => (v ? slugify(v) : '');
     for (const p of bundle.planets) for (const c of p.courses) {
-      const hit = elsewhere.find((e) => e.code === c.key && e.planet.slug !== p.slug);
+      // o próprio planeta (pelo slug ou pelo mesmo nome) não conta como "outro planeta"
+      const own = new Set(planets.filter((x) => x.slug === p.slug || (x.category.slug === p.category && [x.name, x.shortName].some((n) => norm(n) === norm(p.name)))).map((x) => x.slug));
+      const hit = elsewhere.find((e) => e.code === c.key && !own.has(e.planet.slug));
       if (hit) courseCodesElsewhere[c.key] = hit.planet.name;
     }
     return {
@@ -276,6 +281,9 @@ export class ContentImportService {
       planets: planets.map((p) => ({
         id: p.id,
         slug: p.slug,
+        name: p.name,
+        shortName: p.shortName,
+        category: p.category.slug,
         status: p.status,
         contentHash: p.contentHash,
         courses: p.courses.map((c) => ({ id: c.id, code: c.code, slug: c.slug, title: c.title, contentHash: c.contentHash, status: c.status, hasProgress: c._count.enrollments > 0 })),
