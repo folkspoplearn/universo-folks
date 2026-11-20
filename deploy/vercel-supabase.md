@@ -31,6 +31,12 @@ O seed cria as categorias, o primeiro MASTER, o catálogo do protótipo, os temp
 ## 3. Vercel: projeto da API
 New Project → importar `folkspoplearn/universo-folks` → **Root Directory: `backend`**. Deixe "Include files outside the Root Directory" ligado, porque a API usa `packages/content-ingest`. O resto vem do `backend/vercel.json`.
 
+> **Os endereços já se sabem antes do deploy.** O endereço de produção de um projeto da Vercel é `https://<nome-do-projeto>.vercel.app`, e o nome é você que escolhe ao criar o projeto. Por isso:
+> 1. Escolha os três nomes antes de começar, por exemplo `folks-api`, `folks-web` e `folks-pwa`. Assim `APP_URL` = `https://folks-api.vercel.app`, `PUBLIC_APP_URL` = `https://folks-web.vercel.app` e `CORS_ORIGINS` = `https://folks-web.vercel.app,https://folks-pwa.vercel.app`.
+> 2. Depois do primeiro deploy, confira em **Settings → Domains** de cada projeto. Se o nome já existia, a Vercel acrescenta um sufixo ao endereço. Se ficou diferente, corrija as variáveis e faça **Redeploy**.
+>
+> `APP_URL` é o endereço da própria API, usado nos links de verificação de certificado e nos vídeos interativos. `PUBLIC_APP_URL` é o endereço da web, usado nos links dos e-mails (convite, nova senha).
+
 **Environment Variables** (Production):
 | Variável | Valor |
 |---|---|
