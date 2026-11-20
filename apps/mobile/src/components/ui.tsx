@@ -1,7 +1,10 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text as RNText, View, type PressableProps, type TextProps, type ViewProps } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text as RNText, View, type PressableProps, type TextProps, type ViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { badgeColor, badgeLabel, colors, errorMessage, radius } from '@folks/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { SpaceBackground } from './space/space-background';
+import { RefreshableScroll } from './pull-refresh';
+import { checkAppUpdate } from '../lib/pwa';
 
 /** Fontes carregadas no _layout (Plus Jakarta Sans, como no protótipo). */
 export const F = { medium: 'PlusJakartaSans_500Medium', semibold: 'PlusJakartaSans_600SemiBold', bold: 'PlusJakartaSans_700Bold', black: 'PlusJakartaSans_800ExtraBold' };
@@ -11,13 +14,21 @@ export function Text({ style, tone = 'ink', weight = 'medium', size = 15, ...p }
   return <RNText {...p} style={[{ color: colors[tone], fontFamily: F[weight], fontSize: size }, style]} />;
 }
 
-/** Tela com o fundo escuro do protótipo. */
-export function Screen({ children, scroll = true, padded = true }: { children: React.ReactNode; scroll?: boolean; padded?: boolean }) {
+/**
+ * Tela com o fundo escuro do protótipo. Com rolagem, tem "puxe para atualizar": recarrega os dados
+ * da tela e, no PWA, confere se saiu versão nova do app. refresh={false} desliga (login, player da etapa).
+ */
+export function Screen({ children, scroll = true, padded = true, refresh = true }: { children: React.ReactNode; scroll?: boolean; padded?: boolean; refresh?: boolean }) {
+  const qc = useQueryClient();
   const inner = <View style={padded ? s.padded : undefined}>{children}</View>;
+  const onRefresh = async () => {
+    if (await checkAppUpdate()) return; // versão nova: a página recarrega
+    await qc.refetchQueries({ type: 'active' });
+  };
   return (
     <SafeAreaView style={s.screen} edges={['top', 'left', 'right']}>
       <SpaceBackground />
-      {scroll ? <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>{inner}</ScrollView> : inner}
+      {scroll ? <RefreshableScroll onRefresh={refresh ? onRefresh : undefined} contentContainerStyle={{ paddingBottom: 32 }}>{inner}</RefreshableScroll> : inner}
     </SafeAreaView>
   );
 }

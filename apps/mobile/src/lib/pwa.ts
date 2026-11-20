@@ -4,3 +4,4 @@ export const isStandalone = () => true;
 export function canPromptInstall() { return false; }
 export async function promptInstall(): Promise<boolean> { return false; }
 export function onInstallAvailable(_cb: () => void) { return () => {}; }
+export async function checkAppUpdate(): Promise<boolean> { return false; }

@@ -33,7 +33,7 @@ function Planetas() {
   const [categoryId, setCategoryId] = useState('');
   const [creating, setCreating] = useState(false);
   const q = useQuery({ queryKey: ['master', 'planets', search, status, categoryId], queryFn: () => api.http.get<PlanetRow[]>('/master/content/planets', { search, status, categoryId }) });
-  const setPlanetStatus = useAction((v: { id: string; status: string }) => api.http.patch(`/master/content/planets/${v.id}`, { status: v.status }), { success: 'Situação do planeta atualizada', invalidate: [['master', 'planets'], ['catalog']] });
+  const setPlanetStatus = useAction((v: { id: string; status: string }) => api.http.patch<{ publishedCourses?: number }>(`/master/content/planets/${v.id}`, { status: v.status }), { success: (r) => (r.publishedCourses ? `Planeta publicado com ${r.publishedCourses} ${r.publishedCourses === 1 ? 'curso' : 'cursos'} que estavam em rascunho` : 'Situação do planeta atualizada'), invalidate: [['master', 'planets'], ['catalog']] });
   return (
     <>
       <div className="mb-4 flex flex-wrap gap-2">

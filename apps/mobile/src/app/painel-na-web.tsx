@@ -13,7 +13,7 @@ export default function PainelNaWeb() {
   const q = useQuery({ queryKey: ['contexts'], queryFn: () => api.auth.contexts() });
   const study = (q.data ?? []).filter((c) => isStudyContext({ mode: c.mode, role: c.role }));
   return (
-    <Screen>
+    <Screen refresh={false}>
       <Text weight="black" size={26} style={{ marginTop: 24 }}>Olá, {user?.name.split(' ')[0]}</Text>
       <Text tone="muted" style={{ marginTop: 6 }}>
         Você entrou como <Text weight="bold">{context ? PROFILE_LABEL[profileOf(context)] : ''}</Text>. O painel de gestão fica na versão web do Universo Folks.

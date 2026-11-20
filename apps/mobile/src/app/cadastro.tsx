@@ -48,7 +48,7 @@ export default function Cadastro() {
   }
 
   return (
-    <Screen>
+    <Screen refresh={false}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/entrar'))} accessibilityRole="button" accessibilityLabel="Voltar para o login" hitSlop={10} style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
           <Text tone="muted" weight="bold">‹ Voltar</Text>

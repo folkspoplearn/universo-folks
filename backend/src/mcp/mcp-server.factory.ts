@@ -184,7 +184,7 @@ export class McpServerFactory {
 
     tool(
       'publish_content',
-      'Altera o status de um planeta ou curso (DRAFT, COMING_SOON, PUBLISHED, ARCHIVED). Confirme com o usuário antes de publicar.',
+      'Altera o status de um planeta ou curso (DRAFT, COMING_SOON, PUBLISHED, ARCHIVED). Publicar o planeta publica junto os cursos em rascunho que têm unidades. Confirme com o usuário antes de publicar.',
       z.object({ entity: z.enum(['planet', 'course']), id: z.string().uuid(), status: contentStatus, cascadeCourses: z.boolean().default(false) }),
       async ({ entity, id, status, cascadeCourses }) => {
         if (entity === 'course') return this.content.updateCourse(user, id, { status });

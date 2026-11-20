@@ -31,6 +31,10 @@ Faltava o que torna a versão web instalável e utilizável como app: manifesto,
   - iPhone: instrução "Compartilhar → Adicionar à Tela de Início";
   - some quando o app já está instalado ou por 14 dias depois de "Agora não".
 - **iPhone/Safari só toca som e voz depois de um toque:** o primeiro toque destrava a voz (`speechSynthesis`) e o áudio (Web Audio). Assim a narração automática (ADR 0017) e os sons das aulas funcionam.
+- **Puxe para atualizar** (2026-11-20): a página trava a rolagem do navegador (`overscroll-behavior: none`) e o react-native-web não implementa o `RefreshControl`, então o PWA não tinha como atualizar.
+  - `RefreshableScroll` (`pull-refresh.web.tsx`): gesto com o dedo, com a lista no topo ("Puxe…", "Solte…", "Atualizando…"). No iOS/Android nativo usa o `RefreshControl`.
+  - Está em todo `Screen` com rolagem. Fica desligado no login, no cadastro e no player da etapa (`refresh={false}`).
+  - Ao soltar: busca de novo as consultas da tela e confere se saiu versão nova do app (`checkAppUpdate`): se saiu, espera o service worker novo e recarrega a página.
 - **Sessão na web:** o refresh token vai para o `localStorage` (antes era o `sessionStorage`, e o iPhone pedia login a cada abertura do app instalado). O que existia no `sessionStorage` é migrado uma vez. Mitigações:
   - rotação do refresh a cada uso;
   - access token curto e só em memória;

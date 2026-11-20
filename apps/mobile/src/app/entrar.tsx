@@ -23,7 +23,7 @@ export default function Entrar() {
   }
 
   return (
-    <Screen>
+    <Screen refresh={false}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 24 }}>
           <PlanetOrb size={84} visual={{ colors: [colors.purple, '#1a1240'], ring: true }} />

@@ -37,7 +37,7 @@ export default function Etapa() {
   }
 
   return (
-    <Screen>
+    <Screen refresh={false}>
       <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Voltar à trilha"><Text tone="muted" weight="bold">← Voltar à trilha</Text></Pressable>
       {q.isLoading ? <Loading /> : q.error ? <ErrorBox error={q.error} onRetry={() => q.refetch()} /> : l && (
         <View style={{ marginTop: 8 }}>

@@ -75,3 +75,26 @@ export function onInstallAvailable(cb: () => void) {
   listeners.add(cb);
   return () => { listeners.delete(cb); };
 }
+
+/**
+ * "Puxe para atualizar": confere se saiu uma versão nova do app (deploy novo na Vercel).
+ * Se saiu, espera o service worker novo assumir e recarrega a página. true = vai recarregar.
+ */
+export async function checkAppUpdate(): Promise<boolean> {
+  if (!('serviceWorker' in navigator) || __DEV__) return false;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return false;
+    await reg.update();
+    if (!reg.installing && !reg.waiting) return false;
+    // o sw.js novo faz skipWaiting + clients.claim: espera ele assumir (até 4 s) e recarrega
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, 4000);
+      navigator.serviceWorker.addEventListener('controllerchange', () => { clearTimeout(t); resolve(); }, { once: true });
+    });
+    window.location.reload();
+    return true;
+  } catch {
+    return false;
+  }
+}

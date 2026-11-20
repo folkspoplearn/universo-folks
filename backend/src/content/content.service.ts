@@ -107,12 +107,26 @@ export class ContentService {
   async updatePlanet(me: AuthUser, id: string, dto: z.infer<typeof planetUpdate>) {
     const { categorySlug, categoryId, ...data } = dto;
     const catId = categoryId || categorySlug ? await this.resolveCategory(this.prisma, categoryId, categorySlug) : undefined;
-    const p = await this.prisma.planet.update({
-      where: { id },
-      data: { ...data, visual: data.visual === null ? Prisma.DbNull : (data.visual as Prisma.InputJsonValue | undefined), ...(catId ? { categoryId: catId } : {}) },
+    const { p, publishedCourses } = await this.prisma.$transaction(async (tx) => {
+      const p = await tx.planet.update({
+        where: { id },
+        data: { ...data, visual: data.visual === null ? Prisma.DbNull : (data.visual as Prisma.InputJsonValue | undefined), ...(catId ? { categoryId: catId } : {}) },
+      });
+      // Publicar o planeta publica junto os cursos em rascunho que já têm trilha. Sem isso, o planeta importado
+      // (cursos nascem DRAFT) aparecia "Em breve" para o aluno, porque o app só mostra cursos publicados.
+      // Cursos "Em breve", arquivados ou sem unidades ficam como estão.
+      const publishedCourses = data.status === 'PUBLISHED' ? await this.publishDraftCourses(tx, id) : [];
+      return { p, publishedCourses };
     });
-    await this.audit.log(me, 'planet.update', 'planet', id, dto);
-    return p;
+    await this.audit.log(me, 'planet.update', 'planet', id, { ...dto, ...(publishedCourses.length ? { publishedCourses } : {}) });
+    return { ...p, publishedCourses: publishedCourses.length };
+  }
+
+  /** Publica os cursos DRAFT com pelo menos uma unidade do planeta. Devolve os ids publicados. */
+  async publishDraftCourses(tx: Tx, planetId: string): Promise<string[]> {
+    const drafts = await tx.course.findMany({ where: { planetId, status: 'DRAFT', units: { some: {} } }, select: { id: true } });
+    if (drafts.length) await tx.course.updateMany({ where: { id: { in: drafts.map((c) => c.id) } }, data: { status: 'PUBLISHED' } });
+    return drafts.map((c) => c.id);
   }
 
   /** Planetas com progresso de alunos são arquivados em vez de apagados. */
