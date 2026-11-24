@@ -114,3 +114,10 @@ const src_1 = require("../src");
     strict_1.default.deepEqual(parseVisual({ kind: 'SVG', svg: '<svg/>' }), { kind: 'svg', svg: '<svg/>' });
     strict_1.default.equal(parseVisual(null), null);
 });
+(0, node_test_1.test)('visual com personagem: speaker passa adiante para a tela desenhar o personagem grande', async () => {
+    const { parseVisual } = await Promise.resolve().then(() => __importStar(require('../src')));
+    strict_1.default.deepEqual(parseVisual({ kind: 'HTML', html: '<div class="dlgq"><div class="dlgctx">O Rafael diz: “Feedback é bronca.”</div></div>', speaker: ['rafael'] }), { kind: 'dialog', context: 'O Rafael diz: “Feedback é bronca.”', lines: [], speaker: ['rafael'] });
+    strict_1.default.deepEqual(parseVisual({ kind: 'HTML', html: '<div class="gapln">We <b class="gapb">___</b> friends.</div>', speaker: ['pedro', 'ana'] }), { kind: 'gap', parts: [{ text: 'We' }, { blank: true }, { text: 'friends.' }], speaker: ['pedro', 'ana'] });
+    strict_1.default.equal(parseVisual({ kind: 'HTML', html: '<div class="dlgq"><div class="dlgctx">Sem personagem.</div></div>', speaker: [] })?.speaker, undefined);
+    strict_1.default.equal(parseVisual({ kind: 'HTML', html: '<div class="dlgq"><div class="dlgctx">x</div></div>', speaker: 'rafael' })?.speaker, undefined, 'speaker precisa ser lista');
+});

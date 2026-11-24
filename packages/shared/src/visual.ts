@@ -2,12 +2,19 @@
  * Visual de uma questão em dados, sem injetar HTML na tela (as duas plataformas desenham igual).
  * Formatos do conteúdo do Claude: SVG; HTML com frase de lacuna (gapln/gapb) ou diálogo (dlgq: dlgctx + dlgb them/me).
  */
-export type QuestionVisual =
+export type QuestionVisual = (
   | { kind: 'svg'; svg: string }
   | { kind: 'image'; url: string }
   | { kind: 'gap'; parts: Array<{ text: string } | { blank: true }> }
   | { kind: 'dialog'; context?: string; lines: Array<{ who: 'them' | 'me'; text: string }> }
-  | { kind: 'text'; text: string };
+  | { kind: 'text'; text: string }
+) & {
+  /**
+   * Personagem(ns) do elenco fixo que aparece(m) grande(s) na tela da pergunta, com o texto no balão
+   * (layout A do protótipo, 2026-11-24). Chaves: thais, marcos, julia, rafael, ana, pedro, samira, isabel, thiago.
+   */
+  speaker?: string[];
+};
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
 /** Tira as tags e decodifica as entidades mais comuns. */
@@ -23,8 +30,14 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-export function parseVisual(v?: { kind: string; svg?: string; html?: string; url?: string } | null): QuestionVisual | null {
+export function parseVisual(v?: { kind: string; svg?: string; html?: string; url?: string; speaker?: unknown } | null): QuestionVisual | null {
   if (!v) return null;
+  const parsed = parseVisualBody(v);
+  const speaker = Array.isArray(v.speaker) ? v.speaker.filter((k): k is string => typeof k === 'string' && k.length > 0) : [];
+  return parsed && speaker.length ? { ...parsed, speaker } : parsed;
+}
+
+function parseVisualBody(v: { kind: string; svg?: string; html?: string; url?: string }): QuestionVisual | null {
   if (v.kind === 'SVG' && v.svg) return { kind: 'svg', svg: v.svg };
   if ((v.kind === 'IMAGE' || v.kind === 'URL') && v.url) return { kind: 'image', url: v.url };
   const html = v.html ?? '';
