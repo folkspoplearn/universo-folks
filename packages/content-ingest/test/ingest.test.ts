@@ -223,6 +223,13 @@ test('planeta de mesmo nome e categoria com slug diferente é preenchido, não d
   const amb = planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [placeholder, { ...placeholder, id: 'p2', slug: 'tempo-2' }] }).planets[0];
   assert.equal(amb.action, 'BLOCKED');
   assert.match(amb.reason ?? '', /tempo, tempo-2/);
+  // Escola: mesmo nome em outra série é outro planeta (não casa pelo nome)
+  const escola = ingest({ content: JSON.stringify({ schemaVersion: 'folks.content/v1', planets: [{ key: 'ciencias-8', slug: 'ciencias-8', name: 'Ciências', category: 'para-a-escola', grade: '8', courses: [
+    { key: 'ciencias-8.eletricidade', slug: 'eletricidade', title: 'Eletricidade', units: [{ title: 'U1', lessons: [{ type: 'LESSON', title: 'Aula', slides: [{ heading: 'Oi', text: 'Olá' }] }] }] },
+  ] }] }) });
+  assert.ok(escola.valid, JSON.stringify(escola.issues.filter((i) => i.severity === 'error')));
+  const ciencias1 = { id: 'e1', slug: 'ciencias-1', name: 'Ciências', category: 'para-a-escola', status: 'PUBLISHED', contentHash: null, courses: [] };
+  assert.equal(planImport(escola.valid!, { categories: ['para-a-escola'], planets: [ciencias1] }).planets[0].action, 'CREATE');
   // o mesmo slug continua tendo prioridade
   const own = { ...placeholder, id: 'p3', slug: 'gestao-de-tempo', courses: [] };
   const p2 = planImport(r.valid!, { categories: ['para-o-trabalho'], planets: [placeholder, own] }).planets[0];

@@ -62,7 +62,10 @@ export function planImport(bundle: Bundle, snap: Snapshot, strategy: Strategy = 
     const bySlug = snap.planets.find((x) => x.slug === p.slug);
     const sameName = (x: Snapshot['planets'][number]) =>
       x.status !== 'ARCHIVED' && x.category === p.category && [x.name, x.shortName].some((n) => !!n && slugify(n) === slugify(p.name));
-    const byName = bySlug ? [] : snap.planets.filter(sameName);
+    // Escola (série) não casa pelo nome: "Ciências" do 1º e do 8º ano são planetas diferentes, e a série não fica
+    // guardada no planeta. Idem quando o próprio lote traz dois planetas com o mesmo nome na mesma categoria.
+    const twinInBundle = bundle.planets.some((o) => o !== p && o.category === p.category && slugify(o.name) === slugify(p.name));
+    const byName = bySlug || p.grade || twinInBundle ? [] : snap.planets.filter(sameName);
     const existing = bySlug ?? (byName.length === 1 ? byName[0] : undefined);
     const base = { key: p.key, slug: p.slug, name: p.name, planetHash: pHash, ...(existing && existing.slug !== p.slug ? { targetSlug: existing.slug } : {}) };
     const courseRows = (action: CourseAction, reason?: string) =>
