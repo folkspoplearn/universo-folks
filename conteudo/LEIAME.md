@@ -192,3 +192,19 @@ Nos cursos antigos, `isFree` segue a mesma regra: as 2 primeiras unidades são g
 - `identify_on_image` (já existe no app): imagem com um ponto marcado e a pergunta "Que parte é esta?". Os dados de cada imagem (pontos e nomes) vêm no gerador.
 - `identify_on_photo` e `pick_photo`: as mesmas da Mecânica, agora com os órgãos.
 - "O caminho do alimento" é um nó de aula com `ford` (boca → estômago → pâncreas e fígado → intestinos).
+
+## Lote 25 · Escola 1º ano: História e Geografia (24/11/2026)
+Com isso o 1º ano tem as 5 matérias: Português, Matemática, Ciências, História e Geografia.
+
+**Novo planeta "História" (galáxia Escola, série 1),** curso "Minha história" (`esc-his-1`), com 5 unidades: Eu cresci, Minha família, Minha escola, Brincadeiras de ontem e de hoje, e O tempo passa. Insígnia "Pequeno Historiador".
+
+**Novo planeta "Geografia" (galáxia Escola, série 1),** curso "Meus lugares" (`esc-geo-1`), com 5 unidades: Minha casa, O caminho da escola, Como está o tempo?, Os lugares do bairro, e Cuidar e respeitar. Insígnia "Pequeno Explorador".
+
+Os dois seguem o padrão do 1º ano: narração automática, pouco texto, imagens no lugar de leitura e uma prática por unidade, com treino misto no fim.
+
+**Widget novo (`w:'kpath'`, tipo `KPATH` no JSON):** mapa em grade com setas. A criança leva o personagem até o destino desviando dos obstáculos.
+- Campos de cada rodada: `a:[x,y]` (início), `b:[x,y]` (destino), `w:[[x,y]]` (obstáculos), `to` (imagem do destino, padrão `escola`), `me` (personagem, padrão `crianca`), `ob` (obstáculo, padrão `arvore`), `g:[colunas,linhas]` (padrão 4×4), `say` (narração) e `fb` (frase ao chegar).
+- Errar o movimento não tira ponto: a voz diz "aí não dá para passar".
+
+**Também usam:** `kline`, `ktap`, `ksort` e `kcmp`, que já estavam no LP, na Matemática e em Ciências.
+**Importador:** 0 erros. Os avisos dos dois cursos são os mesmos dos outros cursos do 1º ano (widgets K* e a metodologia `pick_image`, ainda por desenvolver).
