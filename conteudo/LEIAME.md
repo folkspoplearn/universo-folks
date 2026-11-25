@@ -208,3 +208,8 @@ Os dois seguem o padrão do 1º ano: narração automática, pouco texto, imagen
 
 **Também usam:** `kline`, `ktap`, `ksort` e `kcmp`, que já estavam no LP, na Matemática e em Ciências.
 **Importador:** 0 erros. Os avisos dos dois cursos são os mesmos dos outros cursos do 1º ano (widgets K* e a metodologia `pick_image`, ainda por desenvolver).
+
+## Voz gravada na Escola (24/11/2026)
+O protótipo agora toca falas gravadas com uma voz neural em pt-BR (Kokoro, voz "pf_dora"), no lugar da voz robótica do motor embutido. São 5.046 frases do 1º ano, de Ciências do 8º ano e de Redação da 3ª série, em `prototipo/voz/<2 letras>.json`. Cada arquivo guarda os mp3 em base64, e a chave é o hash FNV-1a da frase.
+- A fala é dividida em frases, e cada frase vira um clipe. Se faltar o clipe de alguma frase, a fala inteira vai para a voz do aparelho, como antes.
+- Isso é coisa do protótipo. No app de verdade, a ADR 0017 continua valendo (voz do aparelho). Se quiserem a voz gravada também no app, dá para gerar os áudios no build a partir do JSON.
