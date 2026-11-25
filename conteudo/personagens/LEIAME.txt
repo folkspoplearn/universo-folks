@@ -1,0 +1,5 @@
+Personagens adultos do Universo Folks, estilo geométrico expressivo.
+Arquivo: <personagem>-<expressão>.svg (viewBox 0 0 140 215, corpo inteiro).
+Expressões: neutral (pergunta), happy (acerto), unsure (erro), upset (conflito em diálogo).
+No app o personagem pisca e mexe a boca enquanto fala (ver CSS .pers .lid e .pers.talk .tm no index.html).
+Recorte de busto usado na tela de exercício: viewBox 14 12 112 134.
