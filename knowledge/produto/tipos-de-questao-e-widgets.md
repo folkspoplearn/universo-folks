@@ -22,6 +22,13 @@ Campos comuns a todos os tipos:
 - `visual`: imagem SVG mostrada **antes** da resposta.
 - `visualAfterAnswer` e `speakAfterAnswer`: mostrados só **depois** da resposta.
 - `audio {kind:"TTS", lang, text}`: falado pela voz do aparelho.
+- `visual.speaker` (lista de chaves do elenco, ex.: `["rafael"]`): o personagem aparece **grande** à esquerda e o texto do visual (contexto do diálogo ou frase com lacuna) fica num balão à direita. Sem texto, o balão mostra a frase do guia. Nessa tela o astronauta sai e quem reage é o personagem: `neutral` durante a pergunta, `happy` no acerto, `unsure` no erro. É o layout A do protótipo, decisão do cliente de 2026-11-24. Vale também para os diálogos (`CHAT`). As crianças da Escola não mudam. `parseVisual` devolve `speaker` junto.
+
+### Interações de instrumento (chegam como `SIMULATOR`)
+O conteúdo do Claude traz três interações de instrumento como `SIMULATOR`. A regra de acerto roda no app, como nos sliders:
+- `simulator.id = "build_chord"`: monte o acorde no braço do violão. Campos: `chord` e `shape {f: casas por corda (-1 = não toca), d: dedos}`.
+- `simulator.id = "tap_fretboard"`: toque a casa certa no violão. Campos: `string`, `fret` e `label?`.
+- `simulator.id = "tap_keyboard"`: toque a tecla certa no teclado. Campos: `mode` (`one` = uma nota, `chord` = acorde), `pitchClass`, `rangeMidi?`, `markMidi?` e `chord?`.
 
 ## Regras
 - **Toda resposta errada explica o motivo.** Nas questões de escolha isso vem no `feedback` de cada alternativa; no classificar, no `feedback` de cada item.

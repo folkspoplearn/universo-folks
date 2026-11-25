@@ -21,6 +21,11 @@ function htmlToText(html) {
 function parseVisual(v) {
     if (!v)
         return null;
+    const parsed = parseVisualBody(v);
+    const speaker = Array.isArray(v.speaker) ? v.speaker.filter((k) => typeof k === 'string' && k.length > 0) : [];
+    return parsed && speaker.length ? { ...parsed, speaker } : parsed;
+}
+function parseVisualBody(v) {
     if (v.kind === 'SVG' && v.svg)
         return { kind: 'svg', svg: v.svg };
     if ((v.kind === 'IMAGE' || v.kind === 'URL') && v.url)

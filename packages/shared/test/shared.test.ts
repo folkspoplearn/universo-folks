@@ -81,3 +81,11 @@ test('visual em HTML vira dados (lacuna, diálogo e texto), sem HTML na tela', a
   assert.deepEqual(parseVisual({ kind: 'SVG', svg: '<svg/>' }), { kind: 'svg', svg: '<svg/>' });
   assert.equal(parseVisual(null), null);
 });
+
+test('visual com personagem: speaker passa adiante para a tela desenhar o personagem grande', async () => {
+  const { parseVisual } = await import('../src');
+  assert.deepEqual(parseVisual({ kind: 'HTML', html: '<div class="dlgq"><div class="dlgctx">O Rafael diz: “Feedback é bronca.”</div></div>', speaker: ['rafael'] }), { kind: 'dialog', context: 'O Rafael diz: “Feedback é bronca.”', lines: [], speaker: ['rafael'] });
+  assert.deepEqual(parseVisual({ kind: 'HTML', html: '<div class="gapln">We <b class="gapb">___</b> friends.</div>', speaker: ['pedro', 'ana'] }), { kind: 'gap', parts: [{ text: 'We' }, { blank: true }, { text: 'friends.' }], speaker: ['pedro', 'ana'] });
+  assert.equal(parseVisual({ kind: 'HTML', html: '<div class="dlgq"><div class="dlgctx">Sem personagem.</div></div>', speaker: [] })?.speaker, undefined);
+  assert.equal(parseVisual({ kind: 'HTML', html: '<div class="dlgq"><div class="dlgctx">x</div></div>', speaker: 'rafael' })?.speaker, undefined, 'speaker precisa ser lista');
+});
