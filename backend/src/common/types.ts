@@ -4,7 +4,7 @@ import { PlatformRole, TenantRole } from '@prisma/client';
  * Contexto ativo do usuário. Um mesmo usuário pode alternar entre:
  *  - PLATFORM: atuando como MASTER-FOLKS (só quem tem platformRole MASTER_FOLKS)
  *  - B2C:      uso individual (ALUNO-CLIENTE) - grátis ou premium
- *  - TENANT:   dentro de uma empresa/órgão (ADMIN-CLIENTE ou COLABORADOR-CLIENTE)
+ *  - TENANT:   dentro de uma empresa/escola/órgão (ADMIN-CLIENTE, COLABORADOR-CLIENTE ou PROFESSOR)
  */
 export type ContextMode = 'PLATFORM' | 'B2C' | 'TENANT';
 
@@ -37,4 +37,4 @@ export interface JwtAccessPayload {
 }
 
 /** Papéis "lógicos" usados no @Roles() */
-export type AppRole = 'MASTER_FOLKS' | 'ADMIN_CLIENTE' | 'COLABORADOR_CLIENTE' | 'ALUNO_CLIENTE';
+export type AppRole = 'MASTER_FOLKS' | 'ADMIN_CLIENTE' | 'COLABORADOR_CLIENTE' | 'ALUNO_CLIENTE' | 'PROFESSOR';

@@ -80,6 +80,21 @@
 - **Relatório CSV** que abre direto no Excel em pt-BR (BOM + `;`).
 - **Empresa suspensa:** o painel é bloqueado e os colaboradores perdem os benefícios.
 
+## 6.1 Escola (ADR 0020)
+- **Estrutura:** escola = tenant `SCHOOL`; série = departamento `GRADE` ("1"…"9", "m1"…"m3"); turma = departamento `CLASS` filho da série (1º ano A, B, C).
+- **Matérias da série:** ao criar a turma, os planetas da Escola com a mesma série são liberados para ela.
+- **Professor:** o administrador liga o professor a turma + matéria. O professor só vê e só atua nessas turmas e matérias.
+- **Tarefa:** lição de casa (`mandatory = true`) ou estudo (`false`), com prazo ou em aberto. Situação do aluno igual à da empresa (em dia, atrasado, não começou, concluiu).
+- **Cobrança:** o professor manda um aviso dentro do app, e o aluno também recebe por e-mail. O texto é opcional; sem texto, vai a lista do que falta.
+- **Relatório do professor:** por turma e matéria, com progresso em cada curso, média de acerto nas práticas, tarefas e última atividade. Em tela (JSON) e em CSV para o Excel.
+- **Virada de ano:** um botão passa todas as turmas para a série seguinte, com a mesma letra. Quem repete fica de fora (lista manual). Na 3ª série do médio, os alunos saem da turma (formados).
+- **Transferência:** a nova escola pede, o aluno aceita pelo código do e-mail; o vínculo antigo é desativado e o histórico é dele.
+- **Licenças:** professor e aluno ocupam licença de usuário; administrador, a cota de administradores.
+- **Sem anúncio e sem compra** para quem está na escola.
+- **Responsável:** liga-se ao filho criando a conta dele (criança avulsa) ou com um código gerado pelo aluno ou pela escola. Registra o consentimento com data e versão do termo. Vê cursos, progresso, tarefas e última atividade.
+- **Menor de 12 anos (avulso):** não vê oferta do Premium; a oferta vai para o responsável (`offersAllowed` em `/me`).
+- **Secretaria (B2G):** tenant `SCHOOL_NETWORK`; vê, só para leitura, cada escola da rede com alunos, professores, ativos na semana e progresso médio.
+
 ## 7. Conta
 - Cadastro B2C exige **data de nascimento** (define se a pessoa é menor de idade). A data só pode ser informada uma vez.
 - "Esqueci minha senha": link de 1 hora.

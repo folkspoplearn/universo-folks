@@ -7,6 +7,9 @@ import type { AnswerPayload, PublicQuestion } from './questions';
 import type { LessonVideo, VideoProgressResult } from './video';
 import type { Narration } from './narration';
 import type { CheckoutResult, Entitlements, Hangar, MyCompany, MySubscription, Preferences, Progress, PublicTier, SubscriptionRefresh } from './account';
+import type {
+  ChildDetail, ChildSummary, ClassReport, Grade, NetworkOverview, Notice, RolloverResult, SchoolGrade, TaskKind, TeacherClass, TeacherTask, TeachingItem,
+} from './school';
 
 type Fetch = typeof fetch;
 
@@ -132,6 +135,34 @@ export function createApiClient(o: ApiClientOptions) {
       equip: (itemId: string) => request<Hangar>('PUT', `/me/hangar/${itemId}`, {}),
       /** empresa do colaborador: departamentos, trilhas obrigatórias e ranking */
       company: () => get<MyCompany>('/me/company'),
+      /** avisos dentro do app (cobrança do professor) */
+      notices: () => get<{ unread: number; items: Notice[] }>('/me/notices'),
+      readNotice: (id: string) => post<{ read: boolean }>(`/me/notices/${id}/read`),
+      readAllNotices: () => post<{ read: number }>('/me/notices/read-all'),
+      /** código para o responsável se ligar à minha conta (30 dias) */
+      guardianCode: () => post<{ code: string; expiresInDays: number }>('/me/guardian-code'),
+      guardians: () => get<Array<{ name: string; email: string; since: string }>>('/me/guardians'),
+      /** aceitar a transferência de escola: devolve a sessão já na escola nova */
+      acceptSchoolTransfer: (code: string) => post<{ tenantId: string; school: string; membershipId: string; session: TokenPair }>('/me/school-transfer/accept', { code }),
+    },
+    /** Professor (ADR 0020): o tenant vem do token. */
+    teacher: {
+      classes: () => get<TeacherClass[]>('/teacher/classes'),
+      report: (classId: string, planetId: string) => get<ClassReport>(`/teacher/classes/${classId}/report${qs({ planetId })}`),
+      reportCsvPath: (classId: string, planetId: string) => `/teacher/classes/${classId}/report.csv${qs({ planetId })}`,
+      tasks: (classId?: string) => get<TeacherTask[]>(`/teacher/tasks${qs({ classId })}`),
+      createTask: (b: { classId: string; planetId: string; courseId?: string; kind: TaskKind; dueDate?: string | null; startsAt?: string | null }) => post<{ id: string }>('/teacher/tasks', b),
+      updateTask: (id: string, b: { kind?: TaskKind; dueDate?: string | null; startsAt?: string | null }) => patch<{ id: string }>(`/teacher/tasks/${id}`, b),
+      deleteTask: (id: string) => request<{ deleted: boolean }>('DELETE', `/teacher/tasks/${id}`),
+      remind: (b: { classId: string; planetId?: string; membershipIds?: string[]; message?: string }) => post<{ sent: number }>('/teacher/reminders', b),
+    },
+    /** Responsável (pai/mãe): filhos e consentimento. */
+    guardian: {
+      children: () => get<ChildSummary[]>('/guardian/children'),
+      child: (studentId: string) => get<ChildDetail>(`/guardian/children/${studentId}`),
+      createChild: (b: { name: string; email: string; password: string; birthDate: string; consent: boolean }) => post<{ studentId: string; email: string; consentVersion: string }>('/guardian/children', b),
+      link: (code: string, consent: boolean) => post<{ studentId: string; consentVersion: string }>('/guardian/links', { code, consent }),
+      revoke: (studentId: string) => request<{ revoked: boolean }>('DELETE', `/guardian/children/${studentId}`),
     },
     billing: {
       /** Básico, Premium, Premium Plus: galáxias e preços (público) */
@@ -171,6 +202,21 @@ export function createApiClient(o: ApiClientOptions) {
       overview: () => get<Record<string, unknown>>(`/companies/${tenantId}`),
       people: (q: { search?: string; departmentId?: string; status?: string } = {}) => get<CompanyPerson[]>(`/companies/${tenantId}/people${qs(q)}`),
       departments: () => get<Array<{ id: string; name: string; [k: string]: unknown }>>(`/companies/${tenantId}/departments`),
+      /** Escola (ADR 0020): `tenantId` = "me" para o administrador. */
+      school: {
+        structure: () => get<SchoolGrade[]>(`/companies/${tenantId}/school/structure`),
+        createClass: (grade: Grade, suffix: string) => post<{ id: string; name: string; subjectsReleased: number }>(`/companies/${tenantId}/school/classes`, { grade, suffix }),
+        syncSubjects: () => post<{ classes: number; released: number }>(`/companies/${tenantId}/school/sync-subjects`),
+        teaching: (membershipId: string) => get<TeachingItem[]>(`/companies/${tenantId}/school/teachers/${membershipId}/teaching`),
+        setTeaching: (membershipId: string, items: Array<{ departmentId: string; planetId: string }>) => request<TeachingItem[]>('PUT', `/companies/${tenantId}/school/teachers/${membershipId}/teaching`, { items }),
+        report: (classId: string, planetId: string) => get<ClassReport>(`/companies/${tenantId}/school/classes/${classId}/report${qs({ planetId })}`),
+        reportCsvPath: (classId: string, planetId: string) => `/companies/${tenantId}/school/classes/${classId}/report.csv${qs({ planetId })}`,
+        rollover: (b: { keepBack?: string[]; dryRun?: boolean }) => post<RolloverResult>(`/companies/${tenantId}/school/rollover`, b),
+        requestTransfer: (email: string) => post<{ sent: boolean; code: string; expiresInDays: number }>(`/companies/${tenantId}/school/transfers`, { email }),
+        guardianCode: (membershipId: string) => post<{ code: string; expiresInDays: number }>(`/companies/${tenantId}/school/students/${membershipId}/guardian-code`),
+      },
+      /** Secretaria de educação (B2G) */
+      network: () => get<NetworkOverview>(`/companies/${tenantId}/network`),
     }),
   };
 }

@@ -201,6 +201,7 @@ export class CompaniesService {
   private async createMemberInternal(actor: AuthUser, tenantId: string, dto: CreateMemberDto) {
     await this.assertDepartments(tenantId, dto.departmentIds);
     const tenant = await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    this.assertRoleFits(tenant.segment, dto.role);
     await this.seats.assertAvailable(tenantId, dto.role ?? 'COLABORADOR_CLIENTE');
 
     const email = dto.email.trim().toLowerCase();
@@ -240,6 +241,11 @@ export class CompaniesService {
     });
     if (invited) await this.sendInvite(user.id, email, tenantId, tenant.tradeName, m.role === 'ADMIN_CLIENTE');
     return { membershipId: m.id, userId: user.id, email, role: m.role, status: m.status, invited };
+  }
+
+  /** PROFESSOR só existe em escola (ADR 0020). */
+  private assertRoleFits(segment: string, role?: string | null) {
+    if (role === 'PROFESSOR' && segment !== 'SCHOOL') throw new BadRequestException('O papel de professor só existe em escolas');
   }
 
   private async sendInvite(userId: string, email: string, tenantId: string, company: string, admin: boolean) {
@@ -303,18 +309,22 @@ export class CompaniesService {
     const demoting = m.role === 'ADMIN_CLIENTE' && ((dto.role && dto.role !== 'ADMIN_CLIENTE') || dto.status === 'DISABLED');
     if (demoting) await this.assertAnotherAdmin(tenantId, m.id);
     if (dto.status === 'INVITED') throw new BadRequestException('Use "reenviar convite" para convidar de novo');
+    if (dto.role) this.assertRoleFits((await this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { segment: true } })).segment, dto.role);
     const targetRole = dto.role ?? m.role;
+    // aluno e professor dividem a cota de usuários; só o administrador tem cota própria (ADR 0020)
+    const pool = (r: string) => (r === 'ADMIN_CLIENTE' ? 'admins' : 'users');
     const reactivating = dto.status === 'ACTIVE' && m.status === 'DISABLED';
     const occupiesSeat = m.status !== 'DISABLED' && dto.status !== 'DISABLED';
     if (reactivating) {
       await this.seats.assertAvailable(tenantId, targetRole); // volta a ocupar a cota do papel
       await assertNoOtherCompany(this.prisma, m.userId, tenantId);
-    } else if (occupiesSeat && targetRole !== m.role) {
+    } else if (occupiesSeat && pool(targetRole) !== pool(m.role)) {
       await this.seats.assertAvailable(tenantId, targetRole); // troca de papel muda de cota
     }
 
     const { departmentIds, ...rest } = dto;
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (m.role === 'PROFESSOR' && targetRole !== 'PROFESSOR') await tx.teachingAssignment.deleteMany({ where: { membershipId } });
       if (departmentIds) {
         await tx.membershipDepartment.deleteMany({ where: { membershipId } });
         if (departmentIds.length) {

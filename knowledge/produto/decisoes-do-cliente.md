@@ -30,6 +30,8 @@ Toda decisão do cliente entra aqui com data. Quando uma decisão contradiz o ar
 | 2026-11-18 | **PWA do app por enquanto**: o app roda pelo navegador e pode ser instalado na tela inicial até a publicação nas lojas, que vem em breve. | ADR 0018. Export web do próprio app Expo (projeto 3 da Vercel, raiz `apps/mobile`), com service worker e convite para instalar (Android: botão; iPhone: Compartilhar → Adicionar à Tela de Início). Sem compras nas lojas nem push no PWA. |
 | 2026-11-18 | **Premium pelo Asaas**: testar primeiro no sandbox. Formas de pagamento: Pix, cartão e boleto (o aluno escolhe na fatura). Ciclos mensal e anual para Premium e Premium Plus, com preço definido depois pelo MASTER no menu Planos. | ADR 0019. Web e PWA pagam pelo Asaas; o app das lojas, pela RevenueCat. Troca para plano maior: a antiga é cancelada quando a nova é paga. Descer de plano: cancelar antes. |
 
+| 2026-11-26 | **Escola (particular, estadual e municipal)** com quatro acessos: administrador da escola (cria contas e gerencia tudo), professor (suas matérias e seus alunos, relatório e tarefas), aluno e responsável (autorizações legais e acompanhamento do filho, o mesmo acesso da criança avulsa). No B2G, a secretaria vê todas as escolas. Várias turmas por série. Tarefa como lição de casa ou estudo, com prazo ou em aberto, e cobrança pelo app. Virada de ano com um botão e exceção para quem repete. O aluno tem login próprio e não perde o histórico ao mudar de escola. Pagamento por licença de usuário. Escola sem anúncio nem compra. | ADR 0020. Login sem e-mail em aberto (cliente com o Kewen). |
+
 ## Herdado do protótipo (aceito)
 - Plano grátis: unidades 1 e 2 de cada curso; 1 rodada/dia de prática infinita (12 exercícios); 1 jam/dia.
 - Anúncio com recompensa só para **adultos**, nunca no meio da lição, nunca em empresa nem no Premium.
@@ -40,6 +42,6 @@ Toda decisão do cliente entra aqui com data. Quando uma decisão contradiz o ar
 ## Em aberto (perguntar ao cliente)
 - Suspender automaticamente uma empresa com boleto vencido há N dias?
 - Preços e product ids dos planos Premium e Premium Plus.
-- Regras detalhadas do B2G.
+- B2G: o básico está na ADR 0020 (secretaria vê as escolas). Falta o processo de contratação pública (licitação, contrato) e o login de aluno sem e-mail.
 - URLs do Vimeo dos vídeos do Feedback (serão ligadas pela pasta quando houver token).
 - Regra de acerto de cada simulador (`saldo`, `juros`, `reserva`, câmera...) para corrigir no servidor.

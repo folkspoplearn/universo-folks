@@ -55,6 +55,8 @@ export class ContentIngestWriter {
           ...(planet.themeColor !== undefined ? { themeColor: planet.themeColor } : {}),
           ...(planet.visual !== undefined ? { visual: planet.visual as Prisma.InputJsonValue } : {}),
           ...(planet.sortOrder !== undefined ? { sortOrder: planet.sortOrder } : {}),
+          // série escolar: libera a matéria para as turmas da mesma série (ADR 0020)
+          ...(planet.grade !== undefined ? { grade: planet.grade } : {}),
           ...(planet.vimeoFolder ? { vimeoFolderUri: `/projects/${planet.vimeoFolder.match(/(\d+)\/?$/)?.[1] ?? planet.vimeoFolder}` } : {}),
         };
         const defaultStatus = planet.courses.length ? (opts.publish ? 'PUBLISHED' : 'DRAFT') : 'COMING_SOON';

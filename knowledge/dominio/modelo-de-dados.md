@@ -4,20 +4,23 @@
 
 ## Identidade e acesso
 - `User`: pessoa. `platformRole` (MASTER_FOLKS | USER), `birthDate`, `tipsSeen`, `asaasCustomerId`. A senha é nula enquanto o convite não foi aceito.
-- `RefreshToken` (rotação; guarda o contexto), `ApiToken` (PAT para o MCP), `OneTimeToken` (convite e nova senha), `DeviceToken` (push).
+- `RefreshToken` (rotação; guarda o contexto), `ApiToken` (PAT para o MCP), `OneTimeToken` (convite, nova senha, transferência de escola e código do responsável), `DeviceToken` (push).
+- `GuardianLink` (ADR 0020): responsável × aluno, status ACTIVE/REVOKED, `consentVersion` e `consentAt`.
+- `Notice` (ADR 0020): aviso dentro do app (cobrança do professor), com `readAt`.
 
 ## Tenancy
-- `Tenant` (B2B/B2G, `joinCode`, status, visual, `asaasCustomerId`) e `TenantSettings`:
-  - cotas `maxCollaborators` (coluna `max_users`) e `maxAdmins`;
+- `Tenant` (B2B/B2G, `segment` CORPORATE/SCHOOL/SCHOOL_NETWORK, `networkId` da secretaria, `joinCode`, status, visual, `asaasCustomerId`) e `TenantSettings`:
+  - cotas `maxCollaborators` (coluna `max_users`; inclui professores) e `maxAdmins`;
   - `passingScore`, tentativas, fluxo sequencial, contrato.
 - `Membership`:
-  - papel (ADMIN_CLIENTE | COLABORADOR_CLIENTE) e status (INVITED | ACTIVE | DISABLED);
+  - papel (ADMIN_CLIENTE | COLABORADOR_CLIENTE | PROFESSOR, este só em escola) e status (INVITED | ACTIVE | DISABLED);
   - **`oneCompanyKey` único** (= userId quando INVITED/ACTIVE) garante "uma empresa por pessoa".
-- `Department` (com hierarquia), `MembershipDepartment` (N:N).
+- `Department` (com hierarquia; `kind` DEPARTMENT/GRADE/CLASS e `grade` para série e turma), `MembershipDepartment` (N:N).
+- `TeachingAssignment` (ADR 0020): professor × turma × planeta (matéria).
 - `TenantPlanetAccess` + `TenantPlanetDepartment` (liberação) e `Assignment` (trilha obrigatória).
 
 ## Conteúdo (global, criado pelo MASTER)
-- `StudyCategory` → `Planet` (visual, tier) → `Course` (code, meta, badge, game, drillLabel) → `Unit` (accessTier, themeColor) → `Lesson` (tipo, content com slides/widgets/check, generators + generatorSpecs, questionCount = questões por rodada, Vimeo, thumbnail) → `Question` (type, data, media, methodology, timeLimitMs) / `QuestionOption` (só nas questões de escolha).
+- `StudyCategory` → `Planet` (visual, tier, `grade` da Escola) → `Course` (code, meta, badge, game, drillLabel) → `Unit` (accessTier, themeColor) → `Lesson` (tipo, content com slides/widgets/check, generators + generatorSpecs, questionCount = questões por rodada, Vimeo, thumbnail) → `Question` (type, data, media, methodology, timeLimitMs) / `QuestionOption` (só nas questões de escolha).
 - Tipos de questão e onde fica a resposta de cada um: ADR 0011 e `knowledge/produto/tipos-de-questao-e-widgets.md`.
 - `Exam` (BANK ou GENERATED). `InteractivePackage`, `ScormRuntimeState`, `XapiStatement`, `XapiDocument`.
 - **Catálogo do MASTER (ADR 0013):** `Methodology` (code = `Question.methodology`, answerFormats, guidance, status ACTIVE/INACTIVE/COMING_SOON, isSystem) e `TrailTemplate` (code, structure JSON, isActive) ← `Course.trailTemplateId` (opcional, SET NULL ao excluir).

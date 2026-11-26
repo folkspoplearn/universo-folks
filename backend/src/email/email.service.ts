@@ -43,6 +43,23 @@ export const templates = {
       text: `Trilhas pendentes na ${company}: ${pending.map((p) => p.title).join(', ')}. ${appUrl}`,
     };
   },
+  /** Cobrança do professor (ADR 0020): o mesmo texto vai como aviso no app. */
+  teacherReminder(appUrl: string, school: string, teacher: string, message: string | null, pending: Array<{ title: string; due: string | null }>): Omit<Mail, 'to'> {
+    const items = pending.map((p) => `<li>${esc(p.title)}${p.due ? ` — prazo ${esc(p.due)}` : ''}</li>`).join('');
+    return {
+      subject: `Recado de ${teacher} (${school})`,
+      html: layout('Tem tarefa te esperando', `${message ? `<p>${esc(message)}</p>` : ''}<p>Tarefas pendentes:</p><ul>${items}</ul><p style="color:#8e84b8">${esc(teacher)} · ${esc(school)}</p>`, { label: 'Abrir o app', url: appUrl }),
+      text: `${message ? `${message}\n` : ''}Tarefas pendentes: ${pending.map((p) => p.title + (p.due ? ` (prazo ${p.due})` : '')).join(', ')}. ${appUrl}`,
+    };
+  },
+  /** Pedido de transferência de escola (ADR 0020). */
+  schoolTransfer(appUrl: string, school: string, code: string): Omit<Mail, 'to'> {
+    return {
+      subject: `${school} quer receber você no Universo Folks`,
+      html: layout('Mudança de escola', `<p>A <b>${esc(school)}</b> pediu a sua transferência. Seu histórico continua com você.</p><p>Para aceitar, entre no app e use o código:</p><p style="font-size:22px;font-weight:bold;letter-spacing:2px">${esc(code)}</p><p>O código vale por 14 dias. Se você não reconhece esse pedido, ignore este e-mail.</p>`, { label: 'Abrir o app', url: appUrl }),
+      text: `A ${school} pediu a sua transferência. No app, use o código ${code} (vale 14 dias). Se não reconhece, ignore.`,
+    };
+  },
 };
 
 /**

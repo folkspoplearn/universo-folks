@@ -11,15 +11,17 @@ export interface SeatPool {
 export interface SeatUsage {
   collaborators: SeatPool;
   admins: SeatPool;
+  /** professores (escola): ocupam a cota de usuários, junto com os alunos (ADR 0020) */
+  teachers: number;
   /** todas as pessoas que ocupam licença (convidadas + ativas) */
   totalUsed: number;
 }
 
-const ROLE_LABEL: Record<TenantRole, string> = { COLABORADOR_CLIENTE: 'colaboradores', ADMIN_CLIENTE: 'administradores' };
+const ROLE_LABEL: Record<TenantRole, string> = { COLABORADOR_CLIENTE: 'colaboradores', ADMIN_CLIENTE: 'administradores', PROFESSOR: 'usuários' };
 
 /**
  * Licenças por empresa, definidas pelo MASTER-FOLKS em duas cotas separadas:
- *  - maxCollaborators: COLABORADOR-CLIENTE
+ *  - maxCollaborators: COLABORADOR-CLIENTE e PROFESSOR (licença de usuário; ADR 0020)
  *  - maxAdmins:        ADMIN-CLIENTE
  * Convidados e ativos ocupam licença. 0 = sem limite.
  */
@@ -39,9 +41,10 @@ export class SeatsService {
       available: max > 0 ? Math.max(0, max - u) : Number.MAX_SAFE_INTEGER,
       usagePct: max > 0 ? Math.round((u / max) * 100) : 0,
     });
-    const c = used('COLABORADOR_CLIENTE');
+    const t = used('PROFESSOR');
+    const c = used('COLABORADOR_CLIENTE') + t;
     const a = used('ADMIN_CLIENTE');
-    return { collaborators: pool(c, settings?.maxCollaborators ?? 0), admins: pool(a, settings?.maxAdmins ?? 0), totalUsed: c + a };
+    return { collaborators: pool(c, settings?.maxCollaborators ?? 0), admins: pool(a, settings?.maxAdmins ?? 0), teachers: t, totalUsed: c + a };
   }
 
   /** 403 se a cota do papel estiver cheia. */

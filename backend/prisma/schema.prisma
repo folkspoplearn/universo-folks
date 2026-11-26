@@ -42,6 +42,13 @@ enum TenantType {
   B2G
 }
 
+/// O que o tenant é na prática (ADR 0020). A cobrança continua em TenantType (B2B/B2G).
+enum TenantSegment {
+  CORPORATE /// empresa
+  SCHOOL /// escola (particular, estadual ou municipal)
+  SCHOOL_NETWORK /// secretaria de educação: vê as escolas que apontam para ela
+}
+
 enum TenantStatus {
   ACTIVE
   SUSPENDED
@@ -51,6 +58,20 @@ enum TenantStatus {
 enum TenantRole {
   ADMIN_CLIENTE
   COLABORADOR_CLIENTE
+  /// escola: só as turmas e matérias do seu TeachingAssignment (ADR 0020)
+  PROFESSOR
+}
+
+/// Departamento comum (empresa) ou, na escola, série e turma (ADR 0020).
+enum DepartmentKind {
+  DEPARTMENT
+  GRADE /// série: grade = "1".."9" | "m1".."m3"
+  CLASS /// turma: filha de uma série
+}
+
+enum GuardianLinkStatus {
+  ACTIVE
+  REVOKED
 }
 
 enum MembershipStatus {
@@ -103,6 +124,10 @@ enum AllowanceFeature {
 enum OneTimeTokenPurpose {
   INVITE
   PASSWORD_RESET
+  /// escola pede a transferência; o aluno aceita com o código (ADR 0020)
+  SCHOOL_TRANSFER
+  /// código para o responsável se ligar ao aluno (ADR 0020)
+  GUARDIAN_LINK
 }
 
 /// Escolha (SINGLE/MULTIPLE/TRUE_FALSE) usa question_options; os demais guardam a resposta em `data`.
@@ -272,6 +297,11 @@ model User {
   courseStates    CourseState[]
   gameStates      GameState[]
   badges          UserBadge[]
+  /// responsável -> filhos e aluno -> responsáveis (ADR 0020)
+  guardianOf      GuardianLink[] @relation("GuardianLinkGuardian")
+  guardians       GuardianLink[] @relation("GuardianLinkStudent")
+  notices         Notice[]       @relation("NoticeRecipient")
+  noticesSent     Notice[]       @relation("NoticeSender")
 
   @@index([platformRole])
   @@map("users")
@@ -368,8 +398,11 @@ model OneTimeToken {
 // -----------------------------------------------------------------------------
 
 model Tenant {
-  id              String       @id @default(uuid()) @db.Uuid
-  type            TenantType   @default(B2B)
+  id              String        @id @default(uuid()) @db.Uuid
+  type            TenantType    @default(B2B)
+  segment         TenantSegment @default(CORPORATE)
+  /// escola de uma rede (secretaria de educação, segment = SCHOOL_NETWORK)
+  networkId       String?       @map("network_id") @db.Uuid
   legalName       String       @map("legal_name")
   tradeName       String       @map("trade_name")
   document        String?      @unique /// CNPJ
@@ -402,7 +435,12 @@ model Tenant {
   templates     CertificateTemplate[]
   examAttempts  ExamAttempt[]
   activity      ActivityEvent[]
+  network       Tenant?              @relation("SchoolNetwork", fields: [networkId], references: [id], onDelete: SetNull)
+  schools       Tenant[]             @relation("SchoolNetwork")
+  teaching      TeachingAssignment[]
+  notices       Notice[]
 
+  @@index([networkId])
   @@map("tenants")
 }
 
@@ -433,9 +471,12 @@ model Department {
   tenantId    String   @map("tenant_id") @db.Uuid
   name        String
   description String?
-  parentId    String?  @map("parent_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  parentId    String?        @map("parent_id") @db.Uuid
+  kind        DepartmentKind @default(DEPARTMENT)
+  /// série escolar ("1".."9", "m1".."m3"); preenchida em GRADE e CLASS
+  grade       String?        @db.VarChar(3)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
 
   tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   parent       Department?              @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: SetNull)
@@ -443,9 +484,11 @@ model Department {
   members      MembershipDepartment[]
   planetAccess TenantPlanetDepartment[]
   assignments  Assignment[]
+  teaching     TeachingAssignment[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
+  @@index([tenantId, kind, grade])
   @@map("departments")
 }
 
@@ -470,6 +513,7 @@ model Membership {
   tenant      Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   departments MembershipDepartment[]
   assignments Assignment[]
+  teaching    TeachingAssignment[]
 
   @@unique([userId, tenantId])
   @@index([tenantId, role])
@@ -486,6 +530,66 @@ model MembershipDepartment {
   @@id([membershipId, departmentId])
   @@index([departmentId])
   @@map("membership_departments")
+}
+
+/// Escola: o professor ensina este planeta (matéria) nesta turma (ADR 0020).
+model TeachingAssignment {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  membershipId String   @map("membership_id") @db.Uuid
+  departmentId String   @map("department_id") @db.Uuid
+  planetId     String   @map("planet_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  planet     Planet     @relation(fields: [planetId], references: [id], onDelete: Cascade)
+
+  @@unique([membershipId, departmentId, planetId])
+  @@index([tenantId])
+  @@index([departmentId])
+  @@map("teaching_assignments")
+}
+
+/// Aviso dentro do app (cobrança do professor, recados da escola). O push usa o mesmo texto.
+model Notice {
+  id        String    @id @default(uuid()) @db.Uuid
+  tenantId  String?   @map("tenant_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  senderId  String?   @map("sender_id") @db.Uuid
+  title     String
+  body      String
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User    @relation("NoticeRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  sender User?   @relation("NoticeSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@index([tenantId])
+  @@map("notices")
+}
+
+/// Responsável (pai/mãe) ligado a um aluno, com o consentimento registrado (ADR 0020).
+model GuardianLink {
+  id             String             @id @default(uuid()) @db.Uuid
+  guardianId     String             @map("guardian_id") @db.Uuid
+  studentId      String             @map("student_id") @db.Uuid
+  status         GuardianLinkStatus @default(ACTIVE)
+  /// versão do termo aceito pelo responsável
+  consentVersion String             @map("consent_version")
+  consentAt      DateTime           @map("consent_at")
+  revokedAt      DateTime?          @map("revoked_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  guardian User @relation("GuardianLinkGuardian", fields: [guardianId], references: [id], onDelete: Cascade)
+  student  User @relation("GuardianLinkStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([guardianId, studentId])
+  @@index([studentId])
+  @@map("guardian_links")
 }
 
 // -----------------------------------------------------------------------------
@@ -564,6 +668,8 @@ model Planet {
   availableB2C   Boolean       @default(true) @map("available_b2c")
   availableB2B   Boolean       @default(true) @map("available_b2b")
   sortOrder      Int           @default(0) @map("sort_order")
+  /// série escolar dos planetas "Para a escola" ("1".."9", "m1".."m3"); libera a matéria para as turmas da série
+  grade          String?       @db.VarChar(3)
   vimeoFolderUri String?       @map("vimeo_folder_uri")
   certTemplateId String?       @map("cert_template_id") @db.Uuid
   /// hash dos metadados importados (idempotência da importação)
@@ -579,8 +685,10 @@ model Planet {
   tenantAccess TenantPlanetAccess[]
   assignments  Assignment[]
   certificates Certificate[]
+  teaching     TeachingAssignment[]
 
   @@index([categoryId, status])
+  @@index([grade])
   @@map("planets")
 }
 

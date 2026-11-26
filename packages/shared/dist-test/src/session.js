@@ -7,13 +7,16 @@ exports.contextTitle = contextTitle;
 function profileOf(ctx) {
     if (ctx.mode === 'PLATFORM')
         return 'MASTER';
-    if (ctx.mode === 'TENANT')
-        return (ctx.tenantRole ?? ctx.role) === 'ADMIN_CLIENTE' ? 'ADMIN_EMPRESA' : 'COLABORADOR';
+    if (ctx.mode === 'TENANT') {
+        const r = ctx.tenantRole ?? ctx.role;
+        return r === 'ADMIN_CLIENTE' ? 'ADMIN_EMPRESA' : r === 'PROFESSOR' ? 'PROFESSOR' : 'COLABORADOR';
+    }
     return 'ALUNO';
 }
 /** ÚNICA regra de "qual área este perfil vê". Novos perfis (B2G) entram aqui. */
 function areaFor(ctx) {
     const p = profileOf(ctx);
+    // PROFESSOR: estuda como o aluno até a área do professor existir na web (ADR 0020, pendência)
     return p === 'MASTER' ? 'master' : p === 'ADMIN_EMPRESA' ? 'empresa' : 'estudar';
 }
 /** O app (mobile) é a área de estudo: MASTER e ADMIN usam o painel na web. */
@@ -24,6 +27,7 @@ exports.PROFILE_LABEL = {
     ADMIN_EMPRESA: 'Administrador da empresa',
     COLABORADOR: 'Colaborador',
     ALUNO: 'Aluno individual',
+    PROFESSOR: 'Professor',
 };
 /** Rótulo curto de um contexto disponível (tela "Entrar como"). */
 function contextTitle(c) {
@@ -34,6 +38,8 @@ function contextTitle(c) {
         return { title: c.label, subtitle: 'Administrar a empresa' };
     if (p === 'COLABORADOR')
         return { title: c.label, subtitle: 'Estudar pela empresa' };
+    if (p === 'PROFESSOR')
+        return { title: c.label, subtitle: 'Turmas, tarefas e relatórios' };
     return { title: 'Individual', subtitle: 'Estudar por conta própria (grátis ou Premium)' };
 }
 /** Mesmo contexto? (para marcar o atual na troca) */
