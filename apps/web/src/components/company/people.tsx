@@ -7,7 +7,16 @@ import { useSession } from '@/lib/session';
 import { Button, Card, ErrorBox, Loading, Progress, cx } from '../ui';
 import { DataTable, Field, Modal, SearchBox, SelectInput, StatusPill, TextArea, TextInput, opt, useAction, useConfirm, useToast } from '../admin';
 import { useDepartments } from './departments';
-import { ROLE_LABEL, type Department, type Member, type MemberDashboard } from './types';
+import { type Department, type Member, type MemberDashboard } from './types';
+import { useSegment } from '../school/common';
+
+/** Papéis que o administrador pode dar: na escola, aluno, professor e administrador (ADR 0020). */
+function useRoleOptions() {
+  const school = useSegment() === 'SCHOOL';
+  return school
+    ? [{ value: 'COLABORADOR_CLIENTE', label: 'Aluno' }, { value: 'PROFESSOR', label: 'Professor' }, { value: 'ADMIN_CLIENTE', label: 'Administrador' }]
+    : [{ value: 'COLABORADOR_CLIENTE', label: 'Colaborador' }, { value: 'ADMIN_CLIENTE', label: 'Administrador' }];
+}
 
 const TRACK_TONE: Record<string, string> = { DONE: 'text-green', LATE: 'text-red', NOT_STARTED: 'text-dim', INVITED: 'text-blue', ON_TRACK: 'text-ink' };
 
@@ -22,6 +31,7 @@ export function CompanyPeople({ tenantId }: { tenantId: string }) {
   const [search, setSearch] = useState('');
   const [dept, setDept] = useState('');
   const [role, setRole] = useState('');
+  const roleOptions = useRoleOptions();
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [invite, setInvite] = useState(false);
@@ -58,7 +68,7 @@ export function CompanyPeople({ tenantId }: { tenantId: string }) {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <SearchBox value={search} onChange={setSearch} placeholder="Buscar por nome ou e-mail…" />
         <select aria-label="Departamento" value={dept} onChange={(e) => setDept(e.target.value)} className="rounded-xl border border-line bg-bg-2 px-3 py-2.5 text-sm"><option value="">Todos os setores</option>{(departments.data ?? []).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
-        <select aria-label="Papel" value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-line bg-bg-2 px-3 py-2.5 text-sm"><option value="">Todos os papéis</option><option value="COLABORADOR_CLIENTE">Colaboradores</option><option value="ADMIN_CLIENTE">Administradores</option></select>
+        <select aria-label="Papel" value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-line bg-bg-2 px-3 py-2.5 text-sm"><option value="">Todos os papéis</option>{roleOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
         <select aria-label="Situação" value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border border-line bg-bg-2 px-3 py-2.5 text-sm"><option value="">Todas as situações</option><option value="ACTIVE">Ativos</option><option value="INVITED">Convidados</option><option value="DISABLED">Desativados</option></select>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => setBulk(true)}>Importar planilha</Button>
@@ -77,7 +87,7 @@ export function CompanyPeople({ tenantId }: { tenantId: string }) {
       <DataTable rows={rows} rowKey={(m) => m.membershipId} onRowClick={setOpen} empty="Ninguém encontrado com esses filtros."
         columns={[
           { key: 'sel', label: '', className: 'w-8', render: (m) => <input type="checkbox" aria-label={`Selecionar ${m.user.name}`} checked={selected.has(m.membershipId)} onClick={(e) => e.stopPropagation()} onChange={() => toggle(m.membershipId)} /> },
-          { key: 'n', label: 'Pessoa', render: (m) => <div><div className="font-bold">{m.user.name}{m.role === 'ADMIN_CLIENTE' && <span className="ml-2 rounded-full bg-purple/20 px-2 py-0.5 text-[10px] font-extrabold text-purple">ADMIN</span>}</div><div className="text-xs text-dim">{m.user.email}{m.jobTitle ? ` · ${m.jobTitle}` : ''}</div></div> },
+          { key: 'n', label: 'Pessoa', render: (m) => <div><div className="font-bold">{m.user.name}{m.role === 'ADMIN_CLIENTE' && <span className="ml-2 rounded-full bg-purple/20 px-2 py-0.5 text-[10px] font-extrabold text-purple">ADMIN</span>}{m.role === 'PROFESSOR' && <span className="ml-2 rounded-full bg-blue/20 px-2 py-0.5 text-[10px] font-extrabold text-blue">PROFESSOR</span>}</div><div className="text-xs text-dim">{m.user.email}{m.jobTitle ? ` · ${m.jobTitle}` : ''}</div></div> },
           { key: 'd', label: 'Setores', render: (m) => <span className="text-muted">{m.departments.map((d) => d.name).join(', ') || '—'}</span> },
           { key: 's', label: 'Acesso', render: (m) => <StatusPill status={m.status} /> },
           { key: 't', label: 'Trilhas', render: (m) => { const p = track.get(m.membershipId); return p ? <span className={cx('font-bold', TRACK_TONE[p.status] ?? 'text-muted')}>{p.statusLabel}</span> : '—'; } },
@@ -116,6 +126,7 @@ function DeptPicker({ departments, value, onChange }: { departments: Department[
 function InviteModal({ open, onClose, tenantId, departments, invalidate }: { open: boolean; onClose: () => void; tenantId: string; departments: Department[]; invalidate: unknown[][] }) {
   const { api } = useSession();
   const [f, setF] = useState({ name: '', email: '', role: 'COLABORADOR_CLIENTE', jobTitle: '', departmentIds: [] as string[] });
+  const roleOptions = useRoleOptions();
   const save = useAction(() => api.http.post(`/companies/${tenantId}/members`, { name: f.name.trim(), email: f.email.trim(), role: f.role, jobTitle: opt(f.jobTitle), departmentIds: f.departmentIds }),
     { success: `Convite enviado para ${f.email}`, invalidate, onDone: () => { setF({ name: '', email: '', role: 'COLABORADOR_CLIENTE', jobTitle: '', departmentIds: [] }); onClose(); } });
   return (
@@ -126,7 +137,7 @@ function InviteModal({ open, onClose, tenantId, departments, invalidate }: { ope
         <TextInput label="Nome" required autoFocus value={f.name} onChange={(v) => setF({ ...f, name: v })} />
         <TextInput label="E-mail" type="email" required value={f.email} onChange={(v) => setF({ ...f, email: v })} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <SelectInput label="Papel" value={f.role} onChange={(v) => setF({ ...f, role: v })} options={[{ value: 'COLABORADOR_CLIENTE', label: 'Colaborador' }, { value: 'ADMIN_CLIENTE', label: 'Administrador' }]} />
+          <SelectInput label="Papel" value={f.role} onChange={(v) => setF({ ...f, role: v })} options={roleOptions} />
           <TextInput label="Cargo" value={f.jobTitle} onChange={(v) => setF({ ...f, jobTitle: v })} />
         </div>
         <DeptPicker departments={departments} value={f.departmentIds} onChange={(v) => setF({ ...f, departmentIds: v })} />
@@ -168,6 +179,7 @@ function BulkModal({ open, onClose, tenantId, departments, invalidate }: { open:
 
 function MemberModal({ member, tenantId, departments, invalidate, onClose, ask, toast }: { member: Member; tenantId: string; departments: Department[]; invalidate: unknown[][]; onClose: () => void; ask: ReturnType<typeof useConfirm>[0]; toast: ReturnType<typeof useToast> }) {
   const { api } = useSession();
+  const roleOptions = useRoleOptions();
   const [f, setF] = useState({ role: member.role, status: member.status, jobTitle: member.jobTitle ?? '', departmentIds: member.departments.map((d) => d.id) });
   const dash = useQuery({ queryKey: ['company', tenantId, 'member', member.membershipId], queryFn: () => api.http.get<MemberDashboard>(`/dashboards/companies/${tenantId}/members/${member.membershipId}`) });
   const save = useAction(() => api.http.patch(`/companies/${tenantId}/members/${member.membershipId}`, { role: f.role, status: f.status === 'INVITED' ? undefined : f.status, jobTitle: f.jobTitle.trim(), departmentIds: f.departmentIds }), { success: 'Dados atualizados', invalidate, onDone: onClose });
@@ -184,7 +196,7 @@ function MemberModal({ member, tenantId, departments, invalidate, onClose, ask, 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
         <div className="flex flex-col gap-4">
           <div className="text-sm text-muted">{member.user.email}<br />Último acesso: {fmt.relativeDays(member.user.lastLoginAt)}{member.user.gamification ? ` · nível ${member.user.gamification.level} · ${fmt.num(member.user.gamification.totalXp)} XP` : ''}</div>
-          <SelectInput label="Papel" value={f.role} onChange={(v) => setF({ ...f, role: v })} options={[{ value: 'COLABORADOR_CLIENTE', label: ROLE_LABEL.COLABORADOR_CLIENTE }, { value: 'ADMIN_CLIENTE', label: ROLE_LABEL.ADMIN_CLIENTE }]} />
+          <SelectInput label="Papel" value={f.role} onChange={(v) => setF({ ...f, role: v as Member['role'] })} options={roleOptions} />
           {member.status !== 'INVITED' && <SelectInput label="Acesso" value={f.status} onChange={(v) => setF({ ...f, status: v })} options={[{ value: 'ACTIVE', label: 'Ativo' }, { value: 'DISABLED', label: 'Desativado (libera a licença)' }]} />}
           <TextInput label="Cargo" value={f.jobTitle} onChange={(v) => setF({ ...f, jobTitle: v })} />
           <DeptPicker departments={departments} value={f.departmentIds} onChange={(v) => setF({ ...f, departmentIds: v })} />

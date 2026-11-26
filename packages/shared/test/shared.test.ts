@@ -7,6 +7,8 @@ test('cada perfil cai na sua área', () => {
   assert.equal(areaFor({ mode: 'TENANT', tenantRole: 'ADMIN_CLIENTE' }), 'empresa');
   assert.equal(areaFor({ mode: 'TENANT', tenantRole: 'COLABORADOR_CLIENTE' }), 'estudar');
   assert.equal(areaFor({ mode: 'B2C' }), 'estudar');
+  assert.equal(areaFor({ mode: 'TENANT', tenantRole: 'PROFESSOR' }), 'professor');
+  assert.equal(profileOf({ mode: 'TENANT', tenantRole: 'PROFESSOR' }), 'PROFESSOR');
   assert.equal(profileOf({ mode: 'TENANT', tenantRole: null, role: 'ADMIN_CLIENTE' }), 'ADMIN_EMPRESA', 'aceita o role de /auth/contexts');
   assert.equal(contextTitle({ mode: 'B2C', label: 'Individual', role: 'ALUNO_CLIENTE' }).title, 'Individual');
 });

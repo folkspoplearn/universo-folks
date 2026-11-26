@@ -2,7 +2,7 @@
 export interface Department { id: string; name: string; description?: string | null; parentId?: string | null; memberCount?: number }
 export interface Member {
   membershipId: string;
-  role: 'ADMIN_CLIENTE' | 'COLABORADOR_CLIENTE';
+  role: 'ADMIN_CLIENTE' | 'COLABORADOR_CLIENTE' | 'PROFESSOR';
   status: 'INVITED' | 'ACTIVE' | 'DISABLED';
   jobTitle?: string | null;
   user: { id: string; name: string; email: string; lastLoginAt?: string | null; gamification?: { totalXp: number; level: number; currentStreak: number } | null };
@@ -50,4 +50,4 @@ export interface MemberDashboard {
   courses: Array<{ courseId: string; course: string; planet: string; status: string; progressPct: number; startedAt?: string | null; completedAt?: string | null }>;
   certificates: unknown[];
 }
-export const ROLE_LABEL = { ADMIN_CLIENTE: 'Administrador', COLABORADOR_CLIENTE: 'Colaborador' } as const;
+export const ROLE_LABEL = { ADMIN_CLIENTE: 'Administrador', COLABORADOR_CLIENTE: 'Colaborador', PROFESSOR: 'Professor' } as const;

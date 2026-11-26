@@ -44,6 +44,8 @@ const src_1 = require("../src");
     strict_1.default.equal((0, src_1.areaFor)({ mode: 'TENANT', tenantRole: 'ADMIN_CLIENTE' }), 'empresa');
     strict_1.default.equal((0, src_1.areaFor)({ mode: 'TENANT', tenantRole: 'COLABORADOR_CLIENTE' }), 'estudar');
     strict_1.default.equal((0, src_1.areaFor)({ mode: 'B2C' }), 'estudar');
+    strict_1.default.equal((0, src_1.areaFor)({ mode: 'TENANT', tenantRole: 'PROFESSOR' }), 'professor');
+    strict_1.default.equal((0, src_1.profileOf)({ mode: 'TENANT', tenantRole: 'PROFESSOR' }), 'PROFESSOR');
     strict_1.default.equal((0, src_1.profileOf)({ mode: 'TENANT', tenantRole: null, role: 'ADMIN_CLIENTE' }), 'ADMIN_EMPRESA', 'aceita o role de /auth/contexts');
     strict_1.default.equal((0, src_1.contextTitle)({ mode: 'B2C', label: 'Individual', role: 'ALUNO_CLIENTE' }).title, 'Individual');
 });

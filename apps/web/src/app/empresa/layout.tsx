@@ -1,16 +1,6 @@
-import { PanelShell } from '@/components/shells';
+import { EmpresaShell } from '@/components/company/empresa-shell';
 
-/** Menu completo do administrador da empresa (Cliente-Folks B2B). */
-const NAV = [
-  { href: '/empresa', label: 'Visão geral', icon: '📊', exact: true },
-  { href: '/empresa/pessoas', label: 'Pessoas', icon: '👥' },
-  { href: '/empresa/departamentos', label: 'Departamentos', icon: '🗂️' },
-  { href: '/empresa/planetas', label: 'Planetas liberados', icon: '🪐' },
-  { href: '/empresa/trilhas', label: 'Trilhas obrigatórias', icon: '🧭' },
-  { href: '/empresa/engajamento', label: 'Engajamento e relatórios', icon: '📈' },
-  { href: '/empresa/configuracoes', label: 'Regras da empresa', icon: '⚙️' },
-];
-
+/** Painel do administrador (empresa, escola ou secretaria): o menu vem do segmento da conta (ADR 0020). */
 export default function EmpresaLayout({ children }: LayoutProps<'/empresa'>) {
-  return <PanelShell area="empresa" title="Painel da empresa" nav={NAV}>{children}</PanelShell>;
+  return <EmpresaShell>{children}</EmpresaShell>;
 }

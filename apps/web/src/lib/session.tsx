@@ -144,4 +144,4 @@ export function useSession() {
 }
 
 /** Caminho inicial de cada área. */
-export const AREA_HOME: Record<Area, string> = { master: '/master', empresa: '/empresa', estudar: '/estudar' };
+export const AREA_HOME: Record<Area, string> = { master: '/master', empresa: '/empresa', estudar: '/estudar', professor: '/professor' };

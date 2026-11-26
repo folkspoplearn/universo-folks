@@ -44,7 +44,7 @@ export interface TokenPair {
 /** Os perfis do produto. PROFESSOR existe só em escola (ADR 0020). */
 export type Profile = 'MASTER' | 'ADMIN_EMPRESA' | 'COLABORADOR' | 'ALUNO' | 'PROFESSOR';
 /** Áreas do front: painel do MASTER, painel da empresa e área de estudo. */
-export type Area = 'master' | 'empresa' | 'estudar';
+export type Area = 'master' | 'empresa' | 'estudar' | 'professor';
 
 export function profileOf(ctx: Pick<ActiveContext, 'mode' | 'tenantRole'> & { role?: string }): Profile {
   if (ctx.mode === 'PLATFORM') return 'MASTER';
@@ -58,8 +58,7 @@ export function profileOf(ctx: Pick<ActiveContext, 'mode' | 'tenantRole'> & { ro
 /** ÚNICA regra de "qual área este perfil vê". Novos perfis (B2G) entram aqui. */
 export function areaFor(ctx: Pick<ActiveContext, 'mode' | 'tenantRole'> & { role?: string }): Area {
   const p = profileOf(ctx);
-  // PROFESSOR: estuda como o aluno até a área do professor existir na web (ADR 0020, pendência)
-  return p === 'MASTER' ? 'master' : p === 'ADMIN_EMPRESA' ? 'empresa' : 'estudar';
+  return p === 'MASTER' ? 'master' : p === 'ADMIN_EMPRESA' ? 'empresa' : p === 'PROFESSOR' ? 'professor' : 'estudar';
 }
 
 /** O app (mobile) é a área de estudo: MASTER e ADMIN usam o painel na web. */
@@ -67,7 +66,7 @@ export const isStudyContext = (ctx: Pick<ActiveContext, 'mode' | 'tenantRole'> &
 
 export const PROFILE_LABEL: Record<Profile, string> = {
   MASTER: 'Master Folks',
-  ADMIN_EMPRESA: 'Administrador da empresa',
+  ADMIN_EMPRESA: 'Administrador',
   COLABORADOR: 'Colaborador',
   ALUNO: 'Aluno individual',
   PROFESSOR: 'Professor',
