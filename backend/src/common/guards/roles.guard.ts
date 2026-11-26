@@ -13,6 +13,8 @@ export function hasRole(user: AuthUser, role: AppRole): boolean {
       return user.mode === 'TENANT' && !!user.tenantId;
     case 'ALUNO_CLIENTE':
       return user.mode === 'B2C';
+    case 'PROFESSOR':
+      return user.mode === 'TENANT' && user.tenantRole === 'PROFESSOR' && !user.impersonating;
   }
 }
 

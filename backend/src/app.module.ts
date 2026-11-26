@@ -33,6 +33,7 @@ import { CronModule } from './cron/cron.module';
 import { ContentImportModule } from './content-import/content-import.module';
 import { PracticeCatalogModule } from './practice-catalog/practice-catalog.module';
 import { PlanTiersModule } from './plan-tiers/plan-tiers.module';
+import { SchoolModule } from './school/school.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -56,6 +57,7 @@ import { HealthController } from './health.controller';
     UsersModule,
     MasterModule,
     CompaniesModule,
+    SchoolModule,
     ContentModule,
     GamificationModule,
     CertificatesModule,

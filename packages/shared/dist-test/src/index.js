@@ -42,6 +42,7 @@ __exportStar(require("./errors"), exports);
 __exportStar(require("./types"), exports);
 __exportStar(require("./api"), exports);
 __exportStar(require("./account"), exports);
+__exportStar(require("./school"), exports);
 __exportStar(require("./sound"), exports);
 __exportStar(require("./pitch"), exports);
 __exportStar(require("./ear-training"), exports);

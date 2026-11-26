@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TenantSegment } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser } from '../common/types';
 import { humanCode, slugify } from '../common/utils';
@@ -64,6 +64,7 @@ export class TenantsService {
   async create(me: AuthUser, dto: CreateTenantDto) {
     const defaults = await this.settings.all();
     const joinCode = dto.joinCode ?? (await this.generateJoinCode(dto.tradeName));
+    await this.assertNetwork(dto.networkId, dto.segment);
     const { admin, settings, ...data } = dto;
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -126,13 +127,23 @@ export class TenantsService {
   }
 
   async update(me: AuthUser, id: string, dto: UpdateTenantDto) {
-    await this.get(id);
+    const current = await this.get(id);
+    if (dto.networkId === id) throw new BadRequestException('Uma escola não pode ser a própria rede');
+    await this.assertNetwork(dto.networkId, dto.segment ?? current.segment);
     const t = await this.prisma.tenant.update({
       where: { id },
       data: { ...dto, govDetails: dto.govDetails as Prisma.InputJsonValue | undefined },
     });
     await this.audit.log(me, 'tenant.update', 'tenant', id, dto, id);
     return t;
+  }
+
+  /** Escola de uma rede: a rede precisa ser uma secretaria (SCHOOL_NETWORK) e a filha, uma escola. ADR 0020. */
+  private async assertNetwork(networkId: string | null | undefined, segment: TenantSegment | undefined) {
+    if (!networkId) return;
+    if (segment && segment !== 'SCHOOL') throw new BadRequestException('Só escolas podem fazer parte de uma rede de ensino');
+    const net = await this.prisma.tenant.findFirst({ where: { id: networkId, deletedAt: null }, select: { segment: true } });
+    if (!net || net.segment !== 'SCHOOL_NETWORK') throw new BadRequestException('A rede informada não é uma secretaria de educação');
   }
 
   async updateSettings(me: AuthUser, id: string, dto: Partial<TenantSettingsDto>) {

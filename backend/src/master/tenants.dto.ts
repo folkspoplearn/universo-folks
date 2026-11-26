@@ -1,8 +1,8 @@
 import { Type } from 'class-transformer';
 import {
-  IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, Matches, Max, Min, MinLength, ValidateNested,
+  IsBoolean, IsDateString, IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, IsUUID, Matches, Max, Min, MinLength, ValidateNested,
 } from 'class-validator';
-import { TenantStatus, TenantType } from '@prisma/client';
+import { TenantSegment, TenantStatus, TenantType } from '@prisma/client';
 import { PASSWORD_MSG, PASSWORD_RULE } from '../auth/dto/auth.dto';
 
 export class TenantSettingsDto {
@@ -40,6 +40,10 @@ export class CreateTenantDto {
   /** "Anual", "Semestral"... (rótulo do contrato) */
   @IsOptional() @IsString() planLabel?: string;
   @IsOptional() @IsEnum(TenantType) type?: TenantType;
+  /** empresa, escola ou secretaria de educação (ADR 0020) */
+  @IsOptional() @IsEnum(TenantSegment) segment?: TenantSegment;
+  /** escola de uma rede: id da secretaria (segment SCHOOL_NETWORK) */
+  @IsOptional() @IsUUID() networkId?: string | null;
   @IsString() @MinLength(2) legalName: string;
   @IsString() @MinLength(2) tradeName: string;
   @IsOptional() @IsString() document?: string;
@@ -61,6 +65,8 @@ export class UpdateTenantDto {
   /** "Anual", "Semestral"... (rótulo do contrato) */
   @IsOptional() @IsString() planLabel?: string;
   @IsOptional() @IsEnum(TenantType) type?: TenantType;
+  @IsOptional() @IsEnum(TenantSegment) segment?: TenantSegment;
+  @IsOptional() @IsUUID() networkId?: string | null;
   @IsOptional() @IsEnum(TenantStatus) status?: TenantStatus;
   @IsOptional() @IsString() legalName?: string;
   @IsOptional() @IsString() tradeName?: string;

@@ -138,12 +138,12 @@ export class AuthService {
       include: {
         memberships: {
           where: { status: 'ACTIVE', tenant: { status: 'ACTIVE', deletedAt: null } },
-          include: { tenant: { select: { id: true, tradeName: true, type: true, logoUrl: true } } },
+          include: { tenant: { select: { id: true, tradeName: true, type: true, segment: true, logoUrl: true } } },
           orderBy: { createdAt: 'asc' },
         },
       },
     });
-    const list: Array<{ mode: ContextMode; tenantId?: string; label: string; role?: string; tenantType?: string; logoUrl?: string | null }> = [];
+    const list: Array<{ mode: ContextMode; tenantId?: string; label: string; role?: string; tenantType?: string; tenantSegment?: string; logoUrl?: string | null }> = [];
     if (user.platformRole === 'MASTER_FOLKS') list.push({ mode: 'PLATFORM', label: 'Folks (Master)', role: 'MASTER_FOLKS' });
     for (const m of user.memberships) {
       list.push({
@@ -152,6 +152,7 @@ export class AuthService {
         label: m.tenant.tradeName,
         role: m.role,
         tenantType: m.tenant.type,
+        tenantSegment: m.tenant.segment,
         logoUrl: m.tenant.logoUrl,
       });
     }

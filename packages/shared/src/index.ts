@@ -3,6 +3,7 @@ export * from './errors';
 export * from './types';
 export * from './api';
 export * from './account';
+export * from './school';
 export * from './sound';
 export * from './pitch';
 export * from './ear-training';

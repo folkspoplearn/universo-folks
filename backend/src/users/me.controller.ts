@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUser } from '../common/decorators';
 import { AuthUser } from '../common/types';
 import { AccessService } from '../access/access.service';
+import { offersAllowed } from '../school/school-rules';
 
 class UpdateProfileDto {
   @IsOptional() @IsString() @MinLength(2) name?: string;
@@ -67,6 +68,11 @@ export class MeController {
       premium: await this.access.isPremium(u),
       b2cPremium: await this.access.hasB2CPremium(u.id),
       entitlements: await this.entitlements.get(u),
+      // oferta do Premium: nunca na escola nem para menores de 12 anos (ADR 0020)
+      offersAllowed: offersAllowed(
+        user.birthDate,
+        (await this.prisma.membership.count({ where: { userId: u.id, status: 'ACTIVE', tenant: { segment: 'SCHOOL' } } })) > 0,
+      ),
     };
   }
 
@@ -119,6 +125,7 @@ export class MeController {
       this.prisma.refreshToken.updateMany({ where: { userId: u.id, revokedAt: null }, data: { revokedAt: now } }),
       this.prisma.deviceToken.deleteMany({ where: { userId: u.id } }),
       this.prisma.oneTimeToken.deleteMany({ where: { userId: u.id } }),
+      this.prisma.guardianLink.updateMany({ where: { OR: [{ guardianId: u.id }, { studentId: u.id }], status: 'ACTIVE' }, data: { status: 'REVOKED', revokedAt: now } }),
       this.prisma.courseState.deleteMany({ where: { userId: u.id } }),
       this.prisma.gameState.deleteMany({ where: { userId: u.id } }),
     ]);

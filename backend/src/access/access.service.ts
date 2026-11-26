@@ -153,12 +153,19 @@ export class AccessService {
       user.tenantRole === 'ADMIN_CLIENTE'
         ? {}
         : { OR: [{ allDepartments: true }, { departments: { some: { departmentId: { in: deptIds } } } }] };
-    return {
-      status: { in: visibleStatus },
-      availableB2B: true,
-      category: { isActive: true },
-      tenantAccess: { some: { tenantId: user.tenantId, enabled: true, ...deptFilter } },
-    };
+    const base: Prisma.PlanetWhereInput = { status: { in: visibleStatus }, availableB2B: true, category: { isActive: true } };
+    // PROFESSOR também vê as matérias que ensina, mesmo sem estar na turma (ADR 0020)
+    if (user.tenantRole === 'PROFESSOR' && user.membershipId) {
+      const taught = await this.prisma.teachingAssignment.findMany({ where: { membershipId: user.membershipId }, select: { planetId: true }, distinct: ['planetId'] });
+      return {
+        ...base,
+        OR: [
+          { tenantAccess: { some: { tenantId: user.tenantId, enabled: true, ...deptFilter } } },
+          { id: { in: taught.map((t) => t.planetId) }, tenantAccess: { some: { tenantId: user.tenantId, enabled: true } } },
+        ],
+      };
+    }
+    return { ...base, tenantAccess: { some: { tenantId: user.tenantId, enabled: true, ...deptFilter } } };
   }
 
   async canSeePlanet(user: AuthUser, planetId: string): Promise<boolean> {

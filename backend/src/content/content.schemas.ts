@@ -103,6 +103,8 @@ export const planetCreate = z.object({
   certTemplateId: z.string().uuid().nullable().optional(),
   shortName: z.string().nullable().optional(),
   visual: planetVisual.nullable().optional(),
+  /** série escolar ("1".."9", "m1".."m3"): libera a matéria para as turmas da série (ADR 0020) */
+  grade: z.string().regex(/^([1-9]|m[1-3])$/, 'Série: 1 a 9 ou m1 a m3').nullable().optional(),
 });
 export const planetUpdate = planetCreate.partial();
 

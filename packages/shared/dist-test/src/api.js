@@ -123,6 +123,34 @@ function createApiClient(o) {
             equip: (itemId) => request('PUT', `/me/hangar/${itemId}`, {}),
             /** empresa do colaborador: departamentos, trilhas obrigatórias e ranking */
             company: () => get('/me/company'),
+            /** avisos dentro do app (cobrança do professor) */
+            notices: () => get('/me/notices'),
+            readNotice: (id) => post(`/me/notices/${id}/read`),
+            readAllNotices: () => post('/me/notices/read-all'),
+            /** código para o responsável se ligar à minha conta (30 dias) */
+            guardianCode: () => post('/me/guardian-code'),
+            guardians: () => get('/me/guardians'),
+            /** aceitar a transferência de escola: devolve a sessão já na escola nova */
+            acceptSchoolTransfer: (code) => post('/me/school-transfer/accept', { code }),
+        },
+        /** Professor (ADR 0020): o tenant vem do token. */
+        teacher: {
+            classes: () => get('/teacher/classes'),
+            report: (classId, planetId) => get(`/teacher/classes/${classId}/report${qs({ planetId })}`),
+            reportCsvPath: (classId, planetId) => `/teacher/classes/${classId}/report.csv${qs({ planetId })}`,
+            tasks: (classId) => get(`/teacher/tasks${qs({ classId })}`),
+            createTask: (b) => post('/teacher/tasks', b),
+            updateTask: (id, b) => patch(`/teacher/tasks/${id}`, b),
+            deleteTask: (id) => request('DELETE', `/teacher/tasks/${id}`),
+            remind: (b) => post('/teacher/reminders', b),
+        },
+        /** Responsável (pai/mãe): filhos e consentimento. */
+        guardian: {
+            children: () => get('/guardian/children'),
+            child: (studentId) => get(`/guardian/children/${studentId}`),
+            createChild: (b) => post('/guardian/children', b),
+            link: (code, consent) => post('/guardian/links', { code, consent }),
+            revoke: (studentId) => request('DELETE', `/guardian/children/${studentId}`),
         },
         billing: {
             /** Básico, Premium, Premium Plus: galáxias e preços (público) */
@@ -161,6 +189,21 @@ function createApiClient(o) {
             overview: () => get(`/companies/${tenantId}`),
             people: (q = {}) => get(`/companies/${tenantId}/people${qs(q)}`),
             departments: () => get(`/companies/${tenantId}/departments`),
+            /** Escola (ADR 0020): `tenantId` = "me" para o administrador. */
+            school: {
+                structure: () => get(`/companies/${tenantId}/school/structure`),
+                createClass: (grade, suffix) => post(`/companies/${tenantId}/school/classes`, { grade, suffix }),
+                syncSubjects: () => post(`/companies/${tenantId}/school/sync-subjects`),
+                teaching: (membershipId) => get(`/companies/${tenantId}/school/teachers/${membershipId}/teaching`),
+                setTeaching: (membershipId, items) => request('PUT', `/companies/${tenantId}/school/teachers/${membershipId}/teaching`, { items }),
+                report: (classId, planetId) => get(`/companies/${tenantId}/school/classes/${classId}/report${qs({ planetId })}`),
+                reportCsvPath: (classId, planetId) => `/companies/${tenantId}/school/classes/${classId}/report.csv${qs({ planetId })}`,
+                rollover: (b) => post(`/companies/${tenantId}/school/rollover`, b),
+                requestTransfer: (email) => post(`/companies/${tenantId}/school/transfers`, { email }),
+                guardianCode: (membershipId) => post(`/companies/${tenantId}/school/students/${membershipId}/guardian-code`),
+            },
+            /** Secretaria de educação (B2G) */
+            network: () => get(`/companies/${tenantId}/network`),
         }),
     };
 }
